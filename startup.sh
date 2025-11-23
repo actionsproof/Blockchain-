@@ -1,14 +1,23 @@
 #!/bin/bash
 set -e
 
+
 # Install Rust
 echo "Installing Rust..."
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-source $HOME/.cargo/env
+# Load Rust environment for this script
+if [ -f "$HOME/.cargo/env" ]; then
+	. "$HOME/.cargo/env"
+else
+	export PATH="$HOME/.cargo/bin:$PATH"
+fi
+
 
 # Install Wasmtime
 echo "Installing Wasmtime..."
-curl https://wasmtime.dev/install.sh -sSf | bash
+curl https://wasmtime.dev/install.sh -sSf | bash || true
+export WASMTIME_HOME="$HOME/.wasmtime"
+export PATH="$WASMTIME_HOME/bin:$PATH"
 
 # Install RocksDB dependencies
 echo "Installing RocksDB dependencies..."
