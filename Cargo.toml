@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "node",
+    "consensus",
+    "runtime",
+    "crypto",
+    "storage",
+    "types"
+]
+
+[profile.release]
+opt-level = 3

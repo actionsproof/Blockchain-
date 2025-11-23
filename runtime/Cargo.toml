@@ -1,0 +1,10 @@
+[package]
+name = "runtime"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+wasmtime = "19"
+types = { path = "../types" }
+storage = { path = "../storage" }
+serde = { version = "1", features = ["derive"] }
