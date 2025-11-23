@@ -1,0 +1,14 @@
+C:\Users\leosi\OneDrive\Desktop\actionsproof-g\target\release\deps\serde-d4f176c383ddfa48.d: C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\Users\leosi\OneDrive\Desktop\actionsproof-g\target\release\build\serde-61dd1a266867dcef\out/private.rs
+
+C:\Users\leosi\OneDrive\Desktop\actionsproof-g\target\release\deps\libserde-d4f176c383ddfa48.rlib: C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\Users\leosi\OneDrive\Desktop\actionsproof-g\target\release\build\serde-61dd1a266867dcef\out/private.rs
+
+C:\Users\leosi\OneDrive\Desktop\actionsproof-g\target\release\deps\libserde-d4f176c383ddfa48.rmeta: C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\Users\leosi\OneDrive\Desktop\actionsproof-g\target\release\build\serde-61dd1a266867dcef\out/private.rs
+
+C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs:
+C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs:
+C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs:
+C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs:
+C:\Users\leosi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs:
+C:\Users\leosi\OneDrive\Desktop\actionsproof-g\target\release\build\serde-61dd1a266867dcef\out/private.rs:
+
+# env-dep:OUT_DIR=C:\\Users\\leosi\\OneDrive\\Desktop\\actionsproof-g\\target\\release\\build\\serde-61dd1a266867dcef\\out
