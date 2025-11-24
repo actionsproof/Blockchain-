@@ -1,8 +1,20 @@
 use serde::{Serialize, Deserialize};
-use sha2::Sha256;
 
 /// Native ACT token amount (in smallest unit: 1 ACT = 10^18 units)
 pub type ActAmount = u128;
+
+/// ACT token decimals (18 decimals like Ethereum)
+pub const ACT_DECIMALS: u32 = 18;
+
+/// Convert ACT to smallest units
+pub fn from_act(act: f64) -> ActAmount {
+    (act * 10_f64.powi(ACT_DECIMALS as i32)) as ActAmount
+}
+
+/// Convert smallest units to ACT
+pub fn to_act(amount: ActAmount) -> f64 {
+    amount as f64 / 10_f64.powi(ACT_DECIMALS as i32)
+}
 
 /// Transaction types in ACT Chain
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -25,8 +37,8 @@ pub enum TransactionType {
 /// ACT Chain transaction
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Transaction {
-    pub from: String,          // ACT address
-    pub nonce: u64,            // Account nonce
+    pub from: crypto::ActAddress,  // ACT address
+    pub nonce: u64,                // Account nonce
     pub tx_type: TransactionType,
     pub gas_limit: u64,
     pub gas_price: ActAmount,

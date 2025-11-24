@@ -101,7 +101,7 @@ impl ActWallet {
         gas_price: ActAmount,
     ) -> Result<Transaction> {
         let tx = Transaction {
-            from: self.address.to_string(),
+            from: self.address.clone(),
             nonce,
             tx_type: TransactionType::Transfer {
                 to: to.to_string(),
@@ -126,7 +126,7 @@ impl ActWallet {
         gas_price: ActAmount,
     ) -> Result<Transaction> {
         let tx = Transaction {
-            from: self.address.to_string(),
+            from: self.address.clone(),
             nonce,
             tx_type: TransactionType::ContractDeploy { code, init_data },
             gas_limit,
