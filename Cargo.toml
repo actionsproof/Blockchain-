@@ -6,7 +6,9 @@ members = [
     "crypto",
     "storage",
     "types",
-    "wallet"
+    "wallet",
+    "state",
+    "mempool"
 ]
 
 [profile.release]
