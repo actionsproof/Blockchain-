@@ -1,7 +1,8 @@
 use libp2p::{
     gossipsub, mdns, noise,
     swarm::{NetworkBehaviour, SwarmEvent},
-    tcp, yamux, PeerId, Swarm,
+    tcp, yamux, PeerId,
+    futures::StreamExt,
 };
 use std::collections::hash_map::DefaultHasher;
 use std::error::Error;
