@@ -7,8 +7,12 @@ use libp2p::{
 use std::collections::hash_map::DefaultHasher;
 use std::error::Error;
 use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::{io, select};
+
+use consensus::{start_consensus, ConsensusEngine};
+use types::Action;
 
 #[derive(NetworkBehaviour)]
 struct NodeBehaviour {
@@ -19,6 +23,16 @@ struct NodeBehaviour {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     println!("🚀 Proof of Action Node starting...");
+
+    // Initialize consensus engine
+    let consensus_engine = Arc::new(ConsensusEngine::new());
+    println!("🎯 Consensus engine initialized");
+
+    // Start consensus in background
+    let consensus_handle = consensus_engine.clone();
+    tokio::spawn(async move {
+        start_consensus(consensus_handle).await;
+    });
 
     // Create a random PeerId
     let local_key = libp2p::identity::Keypair::generate_ed25519();
@@ -68,6 +82,31 @@ async fn main() -> Result<(), Box<dyn Error>> {
     swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
 
     println!("🌐 P2P network initialized. Listening for connections...");
+
+    // Simulate action creation every 30 seconds
+    let engine_for_actions = consensus_engine.clone();
+    tokio::spawn(async move {
+        let mut counter = 0;
+        loop {
+            tokio::time::sleep(Duration::from_secs(30)).await;
+            counter += 1;
+            
+            let action = Action {
+                actor: format!("actor_{}", counter),
+                payload: format!("action_data_{}", counter).into_bytes(),
+                nonce: counter,
+            };
+            
+            match engine_for_actions.propose_block(action.clone()).await {
+                Ok(header) => {
+                    println!("📦 Proposed block {} by {}", header.parent_hash, header.validator_commitment);
+                }
+                Err(e) => {
+                    eprintln!("❌ Failed to propose block: {}", e);
+                }
+            }
+        }
+    });
 
     // Event loop
     loop {
