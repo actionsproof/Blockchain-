@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use types::{Action, BlockHeader};
+use runtime::execute_action_block;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Validator {
@@ -89,6 +90,24 @@ impl ConsensusEngine {
         let proposer = state
             .get_current_proposer()
             .ok_or("No active validators")?;
+        
+        // Execute the action using WASM runtime
+        match execute_action_block(&action) {
+            Ok(exec_result) => {
+                println!(
+                    "✅ Action executed: success={}, gas={}, state_changes={}",
+                    exec_result.success,
+                    exec_result.gas_used,
+                    exec_result.state_changes.len()
+                );
+                for log in &exec_result.logs {
+                    println!("  📝 {}", log);
+                }
+            }
+            Err(e) => {
+                println!("⚠️  Action execution failed: {}", e);
+            }
+        }
         
         // Calculate action hash
         let action_data = serde_json::to_string(&action)
