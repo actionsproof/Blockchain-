@@ -10,9 +10,28 @@ use std::time::Duration;
 use tokio::{io, select};
 
 #[derive(NetworkBehaviour)]
+#[behaviour(to_swarm = "NodeBehaviourEvent")]
 struct NodeBehaviour {
     gossipsub: gossipsub::Behaviour,
     mdns: mdns::tokio::Behaviour,
+}
+
+#[derive(Debug)]
+enum NodeBehaviourEvent {
+    Gossipsub(gossipsub::Event),
+    Mdns(mdns::Event),
+}
+
+impl From<gossipsub::Event> for NodeBehaviourEvent {
+    fn from(event: gossipsub::Event) -> Self {
+        NodeBehaviourEvent::Gossipsub(event)
+    }
+}
+
+impl From<mdns::Event> for NodeBehaviourEvent {
+    fn from(event: mdns::Event) -> Self {
+        NodeBehaviourEvent::Mdns(event)
+    }
 }
 
 #[tokio::main]
