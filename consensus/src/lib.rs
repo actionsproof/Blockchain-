@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use types::{Action, BlockHeader};
 use runtime::execute_action_block;
+use storage::store_block;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Validator {
@@ -130,6 +131,12 @@ impl ConsensusEngine {
             validator_commitment: proposer.pubkey.clone(),
             reward: 100, // Fixed reward for now
         };
+        
+        // Store the block to disk
+        let block_height = state.block_height;
+        if let Err(e) = store_block(&block_header, &action, block_height) {
+            println!("⚠️  Failed to store block: {}", e);
+        }
         
         state.increment_height();
         state.rotate_proposer();
