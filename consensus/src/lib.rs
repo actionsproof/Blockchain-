@@ -129,7 +129,8 @@ impl ConsensusEngine {
                 .unwrap()
                 .as_secs(),
             validator_commitment: proposer.pubkey.clone(),
-            reward: 100, // Fixed reward for now
+            reward: 100, // Fixed reward in ACT (100 units)
+            height: state.block_height,
         };
         
         // Store the block to disk

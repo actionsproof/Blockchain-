@@ -5,7 +5,8 @@ members = [
     "runtime",
     "crypto",
     "storage",
-    "types"
+    "types",
+    "wallet"
 ]
 
 [profile.release]
