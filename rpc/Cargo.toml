@@ -1,19 +1,17 @@
 [package]
-name = "node"
+name = "rpc"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-libp2p = { version = "0.52", features = ["tokio", "tcp", "noise", "yamux", "gossipsub", "mdns", "macros"] }
+axum = "0.7"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-consensus = { path = "../consensus" }
-runtime = { path = "../runtime" }
+tower-http = { version = "0.5", features = ["cors"] }
+anyhow = "1"
 types = { path = "../types" }
 state = { path = "../state" }
 mempool = { path = "../mempool" }
 storage = { path = "../storage" }
 wallet = { path = "../wallet" }
-rpc = { path = "../rpc" }
-anyhow = "1"

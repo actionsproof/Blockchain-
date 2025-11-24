@@ -13,10 +13,10 @@ use tokio::{io, select};
 
 use consensus::{start_consensus, ConsensusEngine};
 use mempool::Mempool;
+use rpc::{start_rpc_server, RpcState};
 use state::{GenesisAccount, StateManager};
 use storage::BlockchainStorage;
 use types::{Action, Transaction, TransactionType};
-use wallet::ActWallet;
 
 #[derive(NetworkBehaviour)]
 struct NodeBehaviour {
@@ -58,6 +58,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let consensus_handle = consensus_engine.clone();
     tokio::spawn(async move {
         start_consensus(consensus_handle).await;
+    });
+
+    // Start RPC server in background
+    let rpc_state = RpcState::new(state_manager.clone(), mempool.clone());
+    tokio::spawn(async move {
+        if let Err(e) = start_rpc_server(rpc_state, 8545).await {
+            eprintln!("❌ RPC server error: {}", e);
+        }
     });
 
     // Create a random PeerId
