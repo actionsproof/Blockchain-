@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use bip39::{Language, Mnemonic};
+use bip39::Mnemonic;
 use crypto::{ActAddress, ActKeyPair};
 use serde::{Deserialize, Serialize};
 use types::{ActAmount, Transaction, TransactionType};
@@ -15,7 +15,10 @@ pub struct ActWallet {
 impl ActWallet {
     /// Create a new wallet with random mnemonic
     pub fn new() -> Result<Self> {
-        let mnemonic = Mnemonic::generate_in(Language::English, 12)?;
+        use rand::Rng;
+        let mut entropy = [0u8; 16]; // 12 words
+        rand::rngs::OsRng.fill(&mut entropy);
+        let mnemonic = Mnemonic::from_entropy(&entropy)?;
         let mnemonic_phrase = mnemonic.to_string();
         
         // Derive seed from mnemonic
@@ -34,7 +37,7 @@ impl ActWallet {
     
     /// Restore wallet from mnemonic phrase
     pub fn from_mnemonic(phrase: &str) -> Result<Self> {
-        let mnemonic = Mnemonic::parse_in(Language::English, phrase)?;
+        let mnemonic = Mnemonic::parse(phrase)?;
         let seed = mnemonic.to_seed("");
         let keypair_seed: [u8; 32] = seed[..32].try_into()?;
         
