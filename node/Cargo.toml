@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-libp2p = "0.52"
+libp2p = { version = "0.54", features = ["gossipsub", "mdns", "noise", "tcp", "tokio", "yamux"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 consensus = { path = "../consensus" }
