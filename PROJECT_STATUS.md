@@ -123,6 +123,25 @@
 - ✅ Wallet-compatible key storage
 
 #### 4. Deployment Status
+**All 3 VMs Built & Running:**
+- ✅ poa-node-1: 107.178.223.1 (us-central1-a) - **LIVE, PRODUCING BLOCKS**
+- ✅ poa-node-2: 34.70.254.28 (us-central1-b) - **LIVE**
+- ✅ poa-node-3: 34.118.200.106 (us-central1-c) - **LIVE**
+
+**Live Block Production** (as of Nov 24, 2025):
+```
+📦 Block 1 finalized at height 0
+📦 Block 2 finalized at height 1  
+📦 Block 3 finalized at height 2
+🔄 Current height: 3+ (blocks every 30s)
+```
+
+**Node Features Active:**
+- 💾 Storage: RocksDB persistent state
+- 🌱 Genesis: 13M ACT pre-allocated (4 accounts)
+- 🔄 Mempool: 10k transaction capacity
+- 📡 P2P: act-blocks + act-transactions topics
+- 🎯 Consensus: PoA with 3 validators
 - ✅ All code committed to GitHub (commit 699982b)
 - ✅ poa-node-1 (107.178.223.1, us-central1-a): ✅ BUILT
 - ✅ poa-node-2 (34.70.254.28, us-central1-b): ✅ BUILT
