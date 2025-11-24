@@ -41,11 +41,33 @@ impl std::fmt::Display for ActAddress {
 }
 
 /// ACT Chain keypair
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActKeyPair {
+    #[serde(with = "signing_key_serde")]
     pub signing_key: SigningKey,
-    pub verifying_key: VerifyingKey,
     pub address: ActAddress,
+}
+
+mod signing_key_serde {
+    use super::*;
+    use serde::{Deserializer, Serializer};
+
+    pub fn serialize<S>(key: &SigningKey, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_bytes(&key.to_bytes())
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<SigningKey, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let bytes: Vec<u8> = serde::Deserialize::deserialize(deserializer)?;
+        let mut arr = [0u8; 32];
+        arr.copy_from_slice(&bytes);
+        Ok(SigningKey::from_bytes(&arr))
+    }
 }
 
 impl ActKeyPair {
@@ -57,7 +79,6 @@ impl ActKeyPair {
         
         Self {
             signing_key,
-            verifying_key,
             address,
         }
     }
@@ -70,7 +91,6 @@ impl ActKeyPair {
         
         Self {
             signing_key,
-            verifying_key,
             address,
         }
     }
@@ -82,7 +102,7 @@ impl ActKeyPair {
     
     /// Get public key bytes
     pub fn public_key(&self) -> Vec<u8> {
-        self.verifying_key.as_bytes().to_vec()
+        self.signing_key.verifying_key().as_bytes().to_vec()
     }
     
     /// Get address
