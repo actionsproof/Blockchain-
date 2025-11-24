@@ -12,7 +12,11 @@ use std::time::Duration;
 use tokio::{io, select};
 
 use consensus::{start_consensus, ConsensusEngine};
-use types::Action;
+use mempool::Mempool;
+use state::{GenesisAccount, StateManager};
+use storage::BlockchainStorage;
+use types::{Action, Transaction, TransactionType};
+use wallet::ActWallet;
 
 #[derive(NetworkBehaviour)]
 struct NodeBehaviour {
@@ -22,7 +26,29 @@ struct NodeBehaviour {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    println!("🚀 Proof of Action Node starting...");
+    println!("🚀 ACT Blockchain Node starting...");
+
+    // Initialize storage
+    let storage = Arc::new(BlockchainStorage::new("./actchain_data")?);
+    println!("💾 Storage initialized");
+
+    // Initialize state manager with genesis accounts
+    let state_manager = Arc::new(StateManager::new(storage.clone()));
+    
+    // Create genesis accounts with initial ACT allocation
+    let genesis_accounts = vec![
+        GenesisAccount::new("ACT-validator1".to_string(), 1_000_000.0), // 1M ACT
+        GenesisAccount::new("ACT-validator2".to_string(), 1_000_000.0),
+        GenesisAccount::new("ACT-validator3".to_string(), 1_000_000.0),
+        GenesisAccount::new("ACT-treasury".to_string(), 10_000_000.0),  // 10M ACT
+    ];
+    
+    state_manager.initialize_genesis(genesis_accounts)?;
+    println!("🌱 Genesis state initialized");
+
+    // Initialize mempool
+    let mempool = Arc::new(Mempool::new(10_000)); // Max 10k pending txs
+    println!("🔄 Mempool initialized");
 
     // Initialize consensus engine
     let consensus_engine = Arc::new(ConsensusEngine::new());
@@ -58,9 +84,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         gossipsub_config,
     )?;
 
-    // Subscribe to action blocks topic
-    let topic = gossipsub::IdentTopic::new("action-blocks");
-    gossipsub.subscribe(&topic)?;
+    // Subscribe to topics
+    let blocks_topic = gossipsub::IdentTopic::new("act-blocks");
+    let tx_topic = gossipsub::IdentTopic::new("act-transactions");
+    gossipsub.subscribe(&blocks_topic)?;
+    gossipsub.subscribe(&tx_topic)?;
+    println!("📡 Subscribed to act-blocks and act-transactions topics");
 
     // Set up mDNS for local peer discovery
     let mdns = mdns::tokio::Behaviour::new(mdns::Config::default(), local_peer_id)?;
@@ -83,23 +112,80 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     println!("🌐 P2P network initialized. Listening for connections...");
 
-    // Simulate action creation every 30 seconds
-    let engine_for_actions = consensus_engine.clone();
+    // Transaction handler - process incoming transactions
+    let mempool_for_handler = mempool.clone();
+    let state_for_handler = state_manager.clone();
+    let (tx_sender, mut tx_receiver) = tokio::sync::mpsc::channel::<Transaction>(1000);
+    
     tokio::spawn(async move {
-        let mut counter = 0;
+        while let Some(tx) = tx_receiver.recv().await {
+            match mempool_for_handler.add_transaction(tx.clone(), &state_for_handler) {
+                Ok(hash) => {
+                    println!("📥 Transaction added to mempool: {}...", &hash[..16]);
+                    let stats = mempool_for_handler.get_stats();
+                    println!("   Mempool: {} txs from {} senders, avg gas: {}",
+                        stats.total_transactions,
+                        stats.unique_senders,
+                        stats.avg_gas_price
+                    );
+                }
+                Err(e) => {
+                    eprintln!("❌ Invalid transaction: {}", e);
+                }
+            }
+        }
+    });
+
+    // Block proposer - create blocks with transactions from mempool
+    let engine_for_blocks = consensus_engine.clone();
+    let mempool_for_blocks = mempool.clone();
+    let state_for_blocks = state_manager.clone();
+    
+    tokio::spawn(async move {
+        let mut block_num = 0;
         loop {
             tokio::time::sleep(Duration::from_secs(30)).await;
-            counter += 1;
+            block_num += 1;
             
+            // Get transactions from mempool
+            let txs = mempool_for_blocks.get_transactions_for_block(100, &state_for_blocks);
+            
+            if !txs.is_empty() {
+                println!("\n🔨 Creating block {} with {} transactions", block_num, txs.len());
+                
+                // Process transactions and update state
+                for tx in &txs {
+                    let tx_hash = tx.hash();
+                    println!("  ✅ Including tx {}... from {}", &tx_hash[..16], &tx.from[..15]);
+                    
+                    // Execute transaction
+                    match &tx.tx_type {
+                        TransactionType::Transfer { to, amount } => {
+                            if let Err(e) = state_for_blocks.transfer(&tx.from, to, *amount) {
+                                eprintln!("     ⚠️  Transfer failed: {}", e);
+                                continue;
+                            }
+                        }
+                        _ => {}
+                    }
+                    
+                    // Remove from mempool
+                    mempool_for_blocks.remove_transaction(&tx_hash);
+                }
+                
+                println!("📊 Block {} processed {} transactions", block_num, txs.len());
+            }
+            
+            // Still propose block (even if empty) for consensus
             let action = Action {
-                actor: format!("actor_{}", counter),
-                payload: format!("action_data_{}", counter).into_bytes(),
-                nonce: counter,
+                actor: format!("block_proposer_{}", block_num),
+                payload: format!("block_{}_data", block_num).into_bytes(),
+                nonce: block_num,
             };
             
-            match engine_for_actions.propose_block(action.clone()).await {
+            match engine_for_blocks.propose_block(action).await {
                 Ok(header) => {
-                    println!("📦 Proposed block {} by {}", header.parent_hash, header.validator_commitment);
+                    println!("📦 Block {} finalized at height {}", block_num, header.height);
                 }
                 Err(e) => {
                     eprintln!("❌ Failed to propose block: {}", e);
@@ -132,10 +218,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     message_id: id,
                     message,
                 })) => {
-                    println!(
-                        "📨 Got message: '{}' with id: {id} from peer: {peer_id}",
-                        String::from_utf8_lossy(&message.data),
-                    );
+                    // Check which topic the message is from
+                    if message.topic.to_string().contains("transactions") {
+                        // Deserialize transaction
+                        if let Ok(tx) = serde_json::from_slice::<Transaction>(&message.data) {
+                            println!("📨 Received transaction from peer: {}", peer_id);
+                            let _ = tx_sender.send(tx).await;
+                        }
+                    } else if message.topic.to_string().contains("blocks") {
+                        println!("📨 Received block from peer: {}", peer_id);
+                    }
                 }
                 _ => {}
             }

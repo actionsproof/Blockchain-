@@ -11,3 +11,8 @@ serde_json = "1"
 consensus = { path = "../consensus" }
 runtime = { path = "../runtime" }
 types = { path = "../types" }
+state = { path = "../state" }
+mempool = { path = "../mempool" }
+storage = { path = "../storage" }
+wallet = { path = "../wallet" }
+anyhow = "1"
