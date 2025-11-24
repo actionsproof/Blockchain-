@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
-use rand::rngs::OsRng;
+use rand::{rngs::OsRng, Rng};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -51,7 +51,7 @@ pub struct ActKeyPair {
 impl ActKeyPair {
     /// Generate a new random keypair
     pub fn generate() -> Self {
-        let signing_key = SigningKey::generate(&mut OsRng);
+        let signing_key = SigningKey::from_bytes(&OsRng.gen::<[u8; 32]>());
         let verifying_key = signing_key.verifying_key();
         let address = ActAddress::from_pubkey(verifying_key.as_bytes());
         

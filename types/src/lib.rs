@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use sha2::{Digest, Sha256};
+use sha2::Sha256;
 
 /// Native ACT token amount (in smallest unit: 1 ACT = 10^18 units)
 pub type ActAmount = u128;
