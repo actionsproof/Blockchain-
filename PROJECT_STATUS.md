@@ -179,38 +179,74 @@
 
 ---
 
-## 📋 Phase 4: Enhanced Features (UPCOMING)
+## ✅ Phase 4: RPC Server & API (COMPLETED)
+
+### 1. RPC Server ✅
+**File**: `rpc/src/lib.rs`
+- ✅ JSON-RPC 2.0 server with Axum
+- ✅ CORS enabled for browser access
+- ✅ Health check endpoint (`/health`)
+- ✅ Port 8545 (standard Ethereum RPC port)
+
+### 2. RPC Methods ✅
+- ✅ `act_getBalance` - Query account balance
+- ✅ `act_getAccount` - Get full account information
+- ✅ `act_getNonce` - Get account nonce
+- ✅ `act_sendTransaction` - Submit signed transaction
+- ✅ `act_getTransaction` - Query transaction by hash
+- ✅ `act_getPendingTransactions` - Get pending transactions
+- ✅ `act_getMempoolStatus` - Get mempool statistics
+
+### 3. Live Deployment ✅
+- ✅ **Node 1**: `107.178.223.1:8545` (Block height: 40+)
+- ✅ **Node 2**: `34.70.254.28:8545` (Block height: 1+)
+- ✅ **Node 3**: `34.118.200.106:8545` (Block height: 1+)
+- ✅ Firewall configured (`act-blockchain-rpc` rule)
+- ✅ Internal connectivity verified
+- ✅ Documentation: `RPC_ACCESS.md`, `DEPLOYMENT_STATUS.md`
+
+### 4. Integration ✅
+- ✅ Integrated with StateManager (balance queries)
+- ✅ Integrated with Mempool (transaction submission)
+- ✅ Transaction validation enabled
+- ✅ Block production with transaction execution
+
+---
+
+## 📋 Phase 5: Developer Tools (UPCOMING)
 
 ### 1. Native Smart Contract System
 - [ ] Contract deployment via transactions
 - [ ] Contract state management
 - [ ] Contract-to-contract calls
 - [ ] Events and logs
-- [ ] Gas metering for contracts
+- [ ] Enhanced gas metering for contracts
 
-### 2. RPC Server
-- [ ] JSON-RPC endpoint for wallets
-- [ ] Query balance
-- [ ] Send transaction
-- [ ] Get block info
-- [ ] Get transaction receipt
-
-### 3. Block Explorer Backend
+### 2. Block Explorer Backend
 - [ ] REST API for block data
-- [ ] Transaction history
-- [ ] Account lookup
+- [ ] Transaction history endpoint
+- [ ] Account lookup and history
 - [ ] Contract verification
+- [ ] Real-time block feed (WebSocket)
 
-### 4. CLI Wallet Tool
-- [ ] Create wallet
+### 3. CLI Wallet Tool
+- [ ] Create wallet (`act-wallet create`)
 - [ ] Import/export wallet
-- [ ] Send ACT
-- [ ] Check balance
-- [ ] Deploy contracts
+- [ ] Send ACT (`act-wallet send`)
+- [ ] Check balance (`act-wallet balance`)
+- [ ] Deploy contracts (`act-wallet deploy`)
+- [ ] Transaction history
+
+### 4. Web-based Block Explorer UI
+- [ ] Browse blocks and transactions
+- [ ] Search by address/hash/height
+- [ ] Account balance viewer
+- [ ] Network statistics dashboard
+- [ ] Contract interaction interface
 
 ---
 
-## 🌐 Phase 5: Multi-Chain Compatibility (FUTURE)
+## 🌐 Phase 6: Multi-Chain Compatibility (FUTURE)
 
 ### 1. EVM Compatibility Layer
 - [ ] secp256k1 signature support (Ethereum keys)
@@ -246,13 +282,15 @@
 ┌─────────────────────────────────────┐
 │       ACT Blockchain Node            │
 ├─────────────────────────────────────┤
-│  P2P (libp2p) │ Consensus (PoA)     │
+│  RPC (JSON-RPC) │ P2P (libp2p)      │
 ├─────────────────────────────────────┤
-│  WASM Runtime │ Storage (RocksDB)   │
+│  State Manager  │ Mempool           │
 ├─────────────────────────────────────┤
-│  Crypto       │ Wallet              │
+│  Consensus (PoA)│ WASM Runtime      │
 ├─────────────────────────────────────┤
-│  Transactions │ Native ACT Currency │
+│  Storage (RocksDB) │ Crypto/Wallet  │
+├─────────────────────────────────────┤
+│  Transactions   │ Native ACT        │
 └─────────────────────────────────────┘
 ```
 
@@ -260,13 +298,16 @@
 
 ```
 actionsproof-g/
-├── node/          # P2P networking, main entry point
+├── node/          # P2P networking, main entry point, RPC integration
 ├── consensus/     # PoA consensus engine
 ├── runtime/       # WASM execution engine
 ├── storage/       # RocksDB persistence
 ├── crypto/        # ACT addresses, signing, verification
 ├── types/         # Transactions, blocks, accounts
-└── wallet/        # ACT wallet with BIP-39
+├── wallet/        # ACT wallet with BIP-39
+├── state/         # State manager (accounts, balances, nonces)
+├── mempool/       # Transaction pool with validation
+└── rpc/           # JSON-RPC 2.0 server (Axum)
 ```
 
 ## 🚀 Deployment
@@ -277,15 +318,22 @@ actionsproof-g/
 - **Status**: ✅ Live and producing blocks
 - **Repository**: `actionsproof/Blockchain-`
 
+**Live RPC Endpoints:**
+- Node 1: `http://107.178.223.1:8545` (Block height: 40+)
+- Node 2: `http://34.70.254.28:8545` (Block height: 1+)
+- Node 3: `http://34.118.200.106:8545` (Block height: 1+)
+
+**Firewall:** Port 8545 open (rule: `act-blockchain-rpc`)
+
 ---
 
 ## 🎯 Next Immediate Steps
 
-1. **Build State Manager** (accounts, balances, nonces)
-2. **Genesis Block** (initial ACT distribution)
-3. **Gas System** (transaction fees)
-4. **Mempool** (transaction queue)
-5. **RPC Server** (wallet API)
+1. **CLI Wallet Tool** - Create command-line tool for ACT transactions
+2. **Block Explorer Backend** - REST API for blockchain data
+3. **Contract Deployment UI** - Web interface for WASM contracts
+4. **Enhanced Smart Contracts** - Events, logs, contract-to-contract calls
+5. **EVM Compatibility** - Support Ethereum-style addresses and transactions
 
 ---
 
@@ -309,5 +357,6 @@ actionsproof-g/
 
 ---
 
-**Last Updated**: November 24, 2025
-**Current Phase**: Phase 3 - Account State Manager
+**Last Updated**: November 25, 2025
+**Current Phase**: Phase 4 Complete - RPC Server Operational
+**Next Phase**: Phase 5 - Developer Tools (CLI Wallet, Block Explorer)
