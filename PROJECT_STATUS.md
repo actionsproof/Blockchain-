@@ -213,29 +213,35 @@
 
 ---
 
-## 📋 Phase 5: Developer Tools (UPCOMING)
+## 📋 Phase 5: Developer Tools (IN PROGRESS)
 
-### 1. Native Smart Contract System
+### 1. CLI Wallet Tool ✅
+**Binary**: `target/release/act-wallet`
+- ✅ Create new wallet with BIP-39 mnemonic
+- ✅ Import wallet from recovery phrase
+- ✅ Check balance and account details
+- ✅ Send ACT tokens with transaction signing
+- ✅ Deploy WASM contracts
+- ✅ List all wallets
+- ✅ Export mnemonic (secure backup)
+- ✅ Encrypted wallet storage (~/.act-wallet/)
+- ✅ RPC client integration
+- ✅ Password-protected wallets
+- ✅ Documentation: `CLI_WALLET.md`
+
+### 2. Native Smart Contract System
 - [ ] Contract deployment via transactions
 - [ ] Contract state management
 - [ ] Contract-to-contract calls
 - [ ] Events and logs
 - [ ] Enhanced gas metering for contracts
 
-### 2. Block Explorer Backend
+### 3. Block Explorer Backend
 - [ ] REST API for block data
 - [ ] Transaction history endpoint
 - [ ] Account lookup and history
 - [ ] Contract verification
 - [ ] Real-time block feed (WebSocket)
-
-### 3. CLI Wallet Tool
-- [ ] Create wallet (`act-wallet create`)
-- [ ] Import/export wallet
-- [ ] Send ACT (`act-wallet send`)
-- [ ] Check balance (`act-wallet balance`)
-- [ ] Deploy contracts (`act-wallet deploy`)
-- [ ] Transaction history
 
 ### 4. Web-based Block Explorer UI
 - [ ] Browse blocks and transactions
@@ -303,11 +309,12 @@ actionsproof-g/
 ├── runtime/       # WASM execution engine
 ├── storage/       # RocksDB persistence
 ├── crypto/        # ACT addresses, signing, verification
-├── types/         # Transactions, blocks, accounts
+├── types/         # Transactions, blocks, accounts, ActAmount utilities
 ├── wallet/        # ACT wallet with BIP-39
 ├── state/         # State manager (accounts, balances, nonces)
 ├── mempool/       # Transaction pool with validation
-└── rpc/           # JSON-RPC 2.0 server (Axum)
+├── rpc/           # JSON-RPC 2.0 server (Axum)
+└── cli-wallet/    # Command-line wallet tool (act-wallet)
 ```
 
 ## 🚀 Deployment
@@ -329,10 +336,10 @@ actionsproof-g/
 
 ## 🎯 Next Immediate Steps
 
-1. **CLI Wallet Tool** - Create command-line tool for ACT transactions
-2. **Block Explorer Backend** - REST API for blockchain data
-3. **Contract Deployment UI** - Web interface for WASM contracts
-4. **Enhanced Smart Contracts** - Events, logs, contract-to-contract calls
+1. **Block Explorer Backend** - REST API with block/transaction/account endpoints
+2. **Block Explorer UI** - Web interface for browsing blockchain data
+3. **Enhanced Smart Contracts** - Events, logs, contract-to-contract calls
+4. **Transaction Broadcasting** - Improved P2P transaction propagation
 5. **EVM Compatibility** - Support Ethereum-style addresses and transactions
 
 ---
@@ -354,9 +361,10 @@ actionsproof-g/
 - **GitHub**: https://github.com/actionsproof/Blockchain-
 - **Live Nodes**: 3 VMs on Google Cloud
 - **Tech Stack**: Rust + WASM + RocksDB + libp2p
+- **CLI Wallet**: `target/release/act-wallet` (see `CLI_WALLET.md`)
 
 ---
 
 **Last Updated**: November 25, 2025
-**Current Phase**: Phase 4 Complete - RPC Server Operational
-**Next Phase**: Phase 5 - Developer Tools (CLI Wallet, Block Explorer)
+**Current Phase**: Phase 5 - CLI Wallet Complete
+**Next Phase**: Block Explorer Development
