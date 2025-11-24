@@ -51,14 +51,14 @@ impl WasmRuntime {
         // Instantiate the module
         let instance = linker.instantiate(&mut store, &module)?;
         
-        // Get the main execution function
-        let execute_fn = instance
-            .get_typed_func::<(i32, i32), i32>(&mut store, "execute")
-            .or_else(|_| instance.get_typed_func::<(), i32>(&mut store, "execute"))?;
-        
-        // Execute the WASM function
-        let result_code = execute_fn.call(&mut store, (0, 0))
-            .or_else(|_| execute_fn.call(&mut store, ()))?;
+        // Get the main execution function - try different signatures
+        let result_code = if let Ok(execute_fn) = instance.get_typed_func::<(), i32>(&mut store, "execute") {
+            execute_fn.call(&mut store, ())?
+        } else if let Ok(execute_fn) = instance.get_typed_func::<(i32, i32), i32>(&mut store, "execute") {
+            execute_fn.call(&mut store, (0, 0))?
+        } else {
+            return Err(anyhow!("No compatible execute function found in WASM module"));
+        };
         
         // Build execution result
         let execution_result = ExecutionResult {
