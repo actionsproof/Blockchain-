@@ -54,7 +54,7 @@ impl Mempool {
             let mut by_hash = self.by_hash.write().unwrap();
             
             pending
-                .entry(tx.from.clone())
+                .entry(tx.from.to_string())
                 .or_insert_with(VecDeque::new)
                 .push_back(tx.clone());
             
@@ -78,7 +78,7 @@ impl Mempool {
         }
         
         // Check nonce
-        let current_nonce = state_manager.get_nonce(&tx.from)?;
+        let current_nonce = state_manager.get_nonce(&tx.from.to_string())?;
         if tx.nonce < current_nonce {
             return Err(anyhow!("Nonce too low"));
         }
@@ -87,7 +87,7 @@ impl Mempool {
         }
         
         // Check balance for transfers
-        let balance = state_manager.get_balance(&tx.from)?;
+        let balance = state_manager.get_balance(&tx.from.to_string())?;
         let total_cost = self.calculate_total_cost(tx);
         if balance < total_cost {
             return Err(anyhow!(
@@ -175,7 +175,7 @@ impl Mempool {
             }
             
             // Check if nonce is correct
-            if let Ok(current_nonce) = state_manager.get_nonce(&tx.from) {
+            if let Ok(current_nonce) = state_manager.get_nonce(&tx.from.to_string()) {
                 if tx.nonce == current_nonce {
                     executable.push(tx);
                 }
@@ -191,10 +191,11 @@ impl Mempool {
         let mut pending = self.pending.write().unwrap();
         
         if let Some(tx) = by_hash.remove(tx_hash) {
-            if let Some(queue) = pending.get_mut(&tx.from) {
+            let tx_from = tx.from.to_string();
+            if let Some(queue) = pending.get_mut(&tx_from) {
                 queue.retain(|t| t.hash() != tx_hash);
                 if queue.is_empty() {
-                    pending.remove(&tx.from);
+                    pending.remove(&tx_from);
                 }
             }
             return Some(tx);

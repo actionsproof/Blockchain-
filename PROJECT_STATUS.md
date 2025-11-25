@@ -229,26 +229,35 @@
 - ✅ Password-protected wallets
 - ✅ Documentation: `CLI_WALLET.md`
 
-### 2. Native Smart Contract System
+### 3. Block Explorer Backend ✅
+**Binary**: `target/release/act-explorer`
+- ✅ REST API server with Axum (port 3001)
+- ✅ GET /api/blocks - Latest blocks
+- ✅ GET /api/blocks/:height - Block by height
+- ✅ GET /api/transactions/:hash - Transaction details
+- ✅ GET /api/accounts/:address - Account information
+- ✅ GET /api/stats - Network statistics
+- ✅ GET /api/search/:query - Universal search
+- ✅ RPC client for blockchain data
+- ✅ CORS enabled for web access
+
+### 4. Web-based Block Explorer UI ✅
+**URL**: `http://localhost:3001`
+- ✅ Responsive web interface
+- ✅ Real-time network statistics
+- ✅ Block browsing with details
+- ✅ Transaction lookup
+- ✅ Account search and balance viewer
+- ✅ Universal search (blocks/txs/accounts)
+- ✅ Modern gradient design
+- ✅ Auto-refresh every 30 seconds
+
+### 5. Native Smart Contract System
 - [ ] Contract deployment via transactions
 - [ ] Contract state management
 - [ ] Contract-to-contract calls
 - [ ] Events and logs
 - [ ] Enhanced gas metering for contracts
-
-### 3. Block Explorer Backend
-- [ ] REST API for block data
-- [ ] Transaction history endpoint
-- [ ] Account lookup and history
-- [ ] Contract verification
-- [ ] Real-time block feed (WebSocket)
-
-### 4. Web-based Block Explorer UI
-- [ ] Browse blocks and transactions
-- [ ] Search by address/hash/height
-- [ ] Account balance viewer
-- [ ] Network statistics dashboard
-- [ ] Contract interaction interface
 
 ---
 
@@ -314,7 +323,8 @@ actionsproof-g/
 ├── state/         # State manager (accounts, balances, nonces)
 ├── mempool/       # Transaction pool with validation
 ├── rpc/           # JSON-RPC 2.0 server (Axum)
-└── cli-wallet/    # Command-line wallet tool (act-wallet)
+├── cli-wallet/    # Command-line wallet tool (act-wallet)
+└── explorer/      # Block explorer backend + web UI (port 3001)
 ```
 
 ## 🚀 Deployment
@@ -336,10 +346,10 @@ actionsproof-g/
 
 ## 🎯 Next Immediate Steps
 
-1. **Block Explorer Backend** - REST API with block/transaction/account endpoints
-2. **Block Explorer UI** - Web interface for browsing blockchain data
-3. **Enhanced Smart Contracts** - Events, logs, contract-to-contract calls
-4. **Transaction Broadcasting** - Improved P2P transaction propagation
+1. **Enhanced Smart Contracts** - Events, logs, contract-to-contract calls
+2. **Deploy Explorer to Live Nodes** - Run explorer on all 3 VMs (port 3001)
+3. **Transaction Broadcasting** - Improved P2P transaction propagation
+4. **Performance Optimization** - Block indexing, caching, faster queries
 5. **EVM Compatibility** - Support Ethereum-style addresses and transactions
 
 ---
@@ -362,9 +372,10 @@ actionsproof-g/
 - **Live Nodes**: 3 VMs on Google Cloud
 - **Tech Stack**: Rust + WASM + RocksDB + libp2p
 - **CLI Wallet**: `target/release/act-wallet` (see `CLI_WALLET.md`)
+- **Block Explorer**: `http://localhost:3001` (act-explorer)
 
 ---
 
 **Last Updated**: November 25, 2025
-**Current Phase**: Phase 5 - CLI Wallet Complete
-**Next Phase**: Block Explorer Development
+**Current Phase**: Phase 5 - CLI Wallet & Block Explorer Complete
+**Next Phase**: Enhanced Smart Contracts & Live Deployment

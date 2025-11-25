@@ -12,7 +12,7 @@ use tower_http::cors::CorsLayer;
 
 use mempool::Mempool;
 use state::StateManager;
-use types::{ActAmount, Transaction};
+use types::{ActAmount, EventLog, Transaction};
 
 /// RPC Server state
 #[derive(Clone)]
@@ -80,6 +80,23 @@ pub struct MempoolStatus {
     pub pending_transactions: usize,
     pub unique_senders: usize,
     pub avg_gas_price: ActAmount,
+}
+
+/// Get logs parameters
+#[derive(Debug, Deserialize)]
+pub struct GetLogsParams {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub topics: Option<Vec<String>>,
+    pub from_block: u64,
+    pub to_block: u64,
+}
+
+/// Get receipt parameters
+#[derive(Debug, Deserialize)]
+pub struct GetReceiptParams {
+    pub tx_hash: String,
 }
 
 impl RpcState {
@@ -235,6 +252,39 @@ async fn handle_rpc(
             };
             
             serde_json::to_value(status)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "act_getLogs" => {
+            let params: GetLogsParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let logs = state
+                .state_manager
+                .query_logs(
+                    params.address.as_deref(),
+                    params.topics,
+                    params.from_block,
+                    params.to_block,
+                )
+                .map_err(|e| RpcError(format!("Failed to query logs: {}", e)))?;
+            
+            println!("📜 Queried {} event logs", logs.len());
+            
+            serde_json::to_value(logs)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "act_getTransactionReceipt" => {
+            let params: GetReceiptParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let receipt = state
+                .state_manager
+                .get_receipt(&params.tx_hash)
+                .map_err(|e| RpcError(format!("Failed to get receipt: {}", e)))?;
+            
+            serde_json::to_value(receipt)
                 .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
         }
 

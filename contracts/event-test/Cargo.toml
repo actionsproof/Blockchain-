@@ -1,0 +1,17 @@
+[package]
+name = "event-test-contract"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+
+[profile.release]
+opt-level = "z"     # Optimize for size
+lto = true          # Enable link-time optimization
+strip = true        # Strip symbols
+panic = "abort"     # Don't include panic unwinding

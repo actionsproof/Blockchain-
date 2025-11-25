@@ -1,0 +1,1 @@
+C:\Users\leosi\OneDrive\Desktop\actionsproof-g\contracts\event-test\target\wasm32-unknown-unknown\release\event_test_contract.wasm: C:\Users\leosi\OneDrive\Desktop\actionsproof-g\contracts\event-test\src\lib.rs

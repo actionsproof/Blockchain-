@@ -4,12 +4,13 @@ use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use storage::BlockchainStorage;
-use types::{Account, ActAmount, Transaction, TransactionType};
+use types::{Account, ActAmount, EventLog, Transaction, TransactionReceipt, TransactionType};
 
 /// State manager for ACT Chain accounts and balances
 pub struct StateManager {
     accounts: Arc<RwLock<HashMap<String, Account>>>,
     storage: Arc<BlockchainStorage>,
+    receipts: Arc<RwLock<HashMap<String, TransactionReceipt>>>,  // tx_hash -> receipt
 }
 
 impl StateManager {
@@ -17,6 +18,7 @@ impl StateManager {
         Self {
             accounts: Arc::new(RwLock::new(HashMap::new())),
             storage,
+            receipts: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -245,6 +247,106 @@ impl StateManager {
     pub fn get_total_supply(&self) -> ActAmount {
         let accounts = self.accounts.read().unwrap();
         accounts.values().map(|a| a.balance).sum()
+    }
+    
+    /// Store transaction receipt with event logs
+    pub fn store_receipt(&self, receipt: TransactionReceipt) -> Result<()> {
+        let mut receipts = self.receipts.write().unwrap();
+        let tx_hash = receipt.transaction_hash.clone();
+        
+        receipts.insert(tx_hash.clone(), receipt.clone());
+        
+        // Persist to storage
+        let key = format!("receipt_{}", tx_hash);
+        let value = serde_json::to_vec(&receipt)?;
+        self.storage.store_state(&key, &value)?;
+        
+        // Index logs by contract address
+        for log in &receipt.logs {
+            self.index_event_log(&log)?;
+        }
+        
+        Ok(())
+    }
+    
+    /// Index event log for efficient querying
+    fn index_event_log(&self, log: &EventLog) -> Result<()> {
+        // Index by contract address
+        let address_key = format!("logs_by_address_{}_{}", log.address, log.block_height);
+        let existing = self.storage.get_state(&address_key)?;
+        let mut log_list: Vec<EventLog> = if let Some(data) = existing {
+            serde_json::from_slice(&data)?
+        } else {
+            Vec::new()
+        };
+        log_list.push(log.clone());
+        self.storage.store_state(&address_key, &serde_json::to_vec(&log_list)?)?;
+        
+        // Index by topic (first topic only for efficiency)
+        if let Some(topic) = log.topics.first() {
+            let topic_key = format!("logs_by_topic_{}_{}", topic, log.block_height);
+            let existing = self.storage.get_state(&topic_key)?;
+            let mut log_list: Vec<EventLog> = if let Some(data) = existing {
+                serde_json::from_slice(&data)?
+            } else {
+                Vec::new()
+            };
+            log_list.push(log.clone());
+            self.storage.store_state(&topic_key, &serde_json::to_vec(&log_list)?)?;
+        }
+        
+        Ok(())
+    }
+    
+    /// Get transaction receipt
+    pub fn get_receipt(&self, tx_hash: &str) -> Result<Option<TransactionReceipt>> {
+        let receipts = self.receipts.read().unwrap();
+        
+        if let Some(receipt) = receipts.get(tx_hash) {
+            return Ok(Some(receipt.clone()));
+        }
+        
+        // Try loading from storage
+        let key = format!("receipt_{}", tx_hash);
+        if let Some(data) = self.storage.get_state(&key)? {
+            let receipt: TransactionReceipt = serde_json::from_slice(&data)?;
+            Ok(Some(receipt))
+        } else {
+            Ok(None)
+        }
+    }
+    
+    /// Query event logs by filter
+    pub fn query_logs(
+        &self,
+        contract_address: Option<&str>,
+        topics: Option<Vec<String>>,
+        from_block: u64,
+        to_block: u64,
+    ) -> Result<Vec<EventLog>> {
+        let mut all_logs = Vec::new();
+        
+        // Query by contract address
+        if let Some(address) = contract_address {
+            for block_height in from_block..=to_block {
+                let key = format!("logs_by_address_{}_{}", address, block_height);
+                if let Some(data) = self.storage.get_state(&key)? {
+                    let logs: Vec<EventLog> = serde_json::from_slice(&data)?;
+                    all_logs.extend(logs);
+                }
+            }
+        }
+        
+        // Filter by topics if specified
+        if let Some(topic_filters) = topics {
+            all_logs.retain(|log| {
+                topic_filters.iter().all(|filter_topic| {
+                    log.topics.contains(filter_topic)
+                })
+            });
+        }
+        
+        Ok(all_logs)
     }
 }
 

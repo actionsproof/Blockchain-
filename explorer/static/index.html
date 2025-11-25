@@ -373,6 +373,42 @@
         }
         
         function renderTransaction(tx) {
+            let eventsHtml = '';
+            if (tx.logs && tx.logs.length > 0) {
+                eventsHtml = `
+                <div class="info-row" style="display: block; margin-top: 20px;">
+                    <span class="info-label">Event Logs (${tx.logs.length}):</span>
+                    <div style="margin-top: 10px;">
+                        ${tx.logs.map((log, idx) => `
+                        <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid #a855f7;">
+                            <div style="font-size: 12px; color: #a855f7; margin-bottom: 5px;">Event #${idx}</div>
+                            <div style="font-size: 11px; margin-bottom: 3px;">
+                                <span style="color: #999;">Contract:</span> 
+                                <span class="hash" style="font-size: 10px;">${log.address}</span>
+                            </div>
+                            ${log.topics && log.topics.length > 0 ? `
+                            <div style="font-size: 11px; margin-bottom: 3px;">
+                                <span style="color: #999;">Topics:</span> 
+                                <div style="margin-left: 10px; margin-top: 3px;">
+                                    ${log.topics.map((topic, i) => `
+                                    <div style="font-size: 10px; color: #60a5fa;">Topic ${i}: ${topic}</div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            ` : ''}
+                            ${log.data && log.data.length > 0 ? `
+                            <div style="font-size: 11px;">
+                                <span style="color: #999;">Data:</span> 
+                                <span style="font-size: 10px; color: #34d399;">${log.data.length} bytes</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                        `).join('')}
+                    </div>
+                </div>
+                `;
+            }
+            
             return `
                 <div class="info-row">
                     <span class="info-label">Hash:</span>
@@ -402,6 +438,7 @@
                     <span class="info-label">Status:</span>
                     <span class="info-value">${tx.status}</span>
                 </div>
+                ${eventsHtml}
             `;
         }
         
