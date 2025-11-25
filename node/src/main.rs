@@ -12,9 +12,11 @@ use std::time::Duration;
 use tokio::{io, select};
 
 use consensus::{start_consensus, ConsensusEngine};
+use governance::GovernanceManager;
 use mempool::Mempool;
 use rpc::{start_rpc_server, RpcState};
 use state::{GenesisAccount, StateManager};
+use staking::StakingManager;
 use storage::BlockchainStorage;
 use types::{Action, Transaction, TransactionType};
 
@@ -50,6 +52,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mempool = Arc::new(Mempool::new(10_000)); // Max 10k pending txs
     println!("🔄 Mempool initialized");
 
+    // Initialize staking manager
+    let staking_manager = Arc::new(tokio::sync::Mutex::new(StakingManager::new()));
+    println!("💎 Staking manager initialized");
+
+    // Initialize governance manager
+    let governance_manager = Arc::new(tokio::sync::Mutex::new(GovernanceManager::new()));
+    println!("🏛️  Governance manager initialized");
+
     // Initialize consensus engine
     let consensus_engine = Arc::new(ConsensusEngine::new());
     println!("🎯 Consensus engine initialized");
@@ -61,7 +71,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
 
     // Start RPC server in background
-    let rpc_state = RpcState::new(state_manager.clone(), mempool.clone());
+    let rpc_state = RpcState::new(
+        state_manager.clone(),
+        mempool.clone(),
+        staking_manager.clone(),
+        governance_manager.clone(),
+    );
     tokio::spawn(async move {
         if let Err(e) = start_rpc_server(rpc_state, 8545).await {
             eprintln!("❌ RPC server error: {}", e);
@@ -148,6 +163,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let engine_for_blocks = consensus_engine.clone();
     let mempool_for_blocks = mempool.clone();
     let state_for_blocks = state_manager.clone();
+    let staking_for_blocks = staking_manager.clone();
+    let governance_for_blocks = governance_manager.clone();
     
     tokio::spawn(async move {
         let mut block_num = 0;
@@ -155,8 +172,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
             tokio::time::sleep(Duration::from_secs(30)).await;
             block_num += 1;
             
+            // Update block height in staking and governance
+            {
+                let mut staking = staking_for_blocks.lock().await;
+                staking.set_block_height(block_num);
+            }
+            {
+                let mut governance = governance_for_blocks.lock().await;
+                governance.set_block_height(block_num);
+            }
+            
             // Get transactions from mempool
             let txs = mempool_for_blocks.get_transactions_for_block(100, &state_for_blocks);
+            
+            let mut total_tx_fees = 0u64;
             
             if !txs.is_empty() {
                 println!("\n🔨 Creating block {} with {} transactions", block_num, txs.len());
@@ -165,6 +194,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 for tx in &txs {
                     let tx_hash = tx.hash();
                     println!("  ✅ Including tx {}... from {}", &tx_hash[..16], &tx.from[..15]);
+                    
+                    // Calculate transaction fee
+                    let tx_fee = (tx.gas_limit as u64) * (tx.gas_price as u64);
+                    total_tx_fees += tx_fee;
                     
                     // Execute transaction
                     match &tx.tx_type {
@@ -181,7 +214,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     mempool_for_blocks.remove_transaction(&tx_hash);
                 }
                 
-                println!("📊 Block {} processed {} transactions", block_num, txs.len());
+                println!("📊 Block {} processed {} transactions, fees: {} ACT", 
+                    block_num, txs.len(), total_tx_fees / 1_000_000_000);
+            }
+            
+            // Distribute block rewards to validator (simplified - using first validator)
+            let validator_address = "ACT-validator1";
+            {
+                let mut staking = staking_for_blocks.lock().await;
+                staking.distribute_block_reward(validator_address, total_tx_fees);
+                println!("💰 Block rewards distributed to {}", validator_address);
+            }
+            
+            // Update active governance proposals
+            {
+                let mut governance = governance_for_blocks.lock().await;
+                let active_proposals: Vec<u64> = governance
+                    .list_proposals(None)
+                    .iter()
+                    .filter(|p| matches!(p.status, governance::ProposalStatus::Review | governance::ProposalStatus::Active))
+                    .map(|p| p.id)
+                    .collect();
+                
+                for proposal_id in active_proposals {
+                    if let Err(e) = governance.update_proposal_status(proposal_id) {
+                        eprintln!("⚠️  Failed to update proposal {}: {}", proposal_id, e);
+                    }
+                }
             }
             
             // Still propose block (even if empty) for consensus

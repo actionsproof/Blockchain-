@@ -16,6 +16,8 @@ mempool = { path = "../mempool" }
 storage = { path = "../storage" }
 wallet = { path = "../wallet" }
 rpc = { path = "../rpc" }
+staking = { path = "../staking" }
+governance = { path = "../governance" }
 anyhow = "1"
 
 [dev-dependencies]

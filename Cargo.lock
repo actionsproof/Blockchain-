@@ -2697,6 +2697,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "consensus",
+ "governance",
  "libp2p",
  "mempool",
  "reqwest",
@@ -2704,6 +2705,7 @@ dependencies = [
  "runtime",
  "serde",
  "serde_json",
+ "staking",
  "state",
  "storage",
  "tokio",
