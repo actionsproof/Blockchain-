@@ -1,0 +1,35 @@
+{
+  "name": "@actchain/sdk",
+  "version": "1.0.0",
+  "description": "JavaScript SDK for ACT Chain - Interact with nodes, manage wallets, deploy contracts, and query blockchain data",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "blockchain",
+    "actchain",
+    "web3",
+    "crypto",
+    "wallet",
+    "smart-contracts"
+  ],
+  "author": "ACT Chain Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "ts-jest": "^29.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "tweetnacl": "^1.0.3",
+    "bs58": "^5.0.0",
+    "buffer": "^6.0.3"
+  }
+}

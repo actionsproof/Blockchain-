@@ -643,3 +643,54 @@ mod tests {
         assert!(!validator.active); // Should be deactivated due to insufficient stake
     }
 }
+
+// Persistence helper structures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StakingState {
+    pub validators: Vec<Validator>,
+    pub delegators: Vec<Delegator>,
+    pub unstake_requests: Vec<UnstakeRequest>,
+}
+
+// Persistence methods for StakingManager
+impl StakingManager {
+    /// Serialize staking state to JSON for persistence
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        let state = StakingState {
+            validators: self.validators.values().cloned().collect(),
+            delegators: self.delegators.values().flatten().cloned().collect(),
+            unstake_requests: self.unstake_requests.clone(),
+        };
+        serde_json::to_string(&state)
+    }
+
+    /// Deserialize staking state from JSON
+    pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
+        let state: StakingState = serde_json::from_str(json)?;
+        let mut manager = StakingManager::new();
+        
+        for validator in state.validators {
+            manager.validators.insert(validator.address.clone(), validator);
+        }
+        for delegator in state.delegators {
+            manager.delegators.entry(delegator.address.clone())
+                .or_insert_with(Vec::new)
+                .push(delegator);
+        }
+        manager.unstake_requests = state.unstake_requests;
+        
+        Ok(manager)
+    }
+
+    /// Export state as bytes for RocksDB storage
+    pub fn to_bytes(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let json = self.to_json()?;
+        Ok(json.into_bytes())
+    }
+
+    /// Import state from bytes
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
+        let json = String::from_utf8(bytes.to_vec())?;
+        Ok(Self::from_json(&json)?)
+    }
+}

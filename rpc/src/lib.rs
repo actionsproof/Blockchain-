@@ -14,7 +14,11 @@ use mempool::Mempool;
 use state::StateManager;
 use staking::StakingManager;
 use governance::GovernanceManager;
-use types::{ActAmount, EventLog, Transaction};
+use types::{ActAmount, Transaction};
+
+pub mod metrics;
+
+use metrics::init_metrics;
 
 /// RPC Server state
 #[derive(Clone)]
@@ -770,11 +774,48 @@ async fn handle_rpc(
     }))
 }
 
+/// Prometheus metrics endpoint
+async fn metrics_handler() -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        [("Content-Type", "text/plain; version=0.0.4")],
+        metrics::export_metrics(),
+    )
+}
+
+/// Node statistics endpoint
+async fn stats_handler(AxumState(state): AxumState<RpcState>) -> impl IntoResponse {
+    // Collect current stats using existing public methods
+    let validators = state.staking_manager.lock().await.get_all_validators();
+    let total_staked: u64 = validators.iter().map(|v| v.stake).sum();
+    
+    let proposals = state.governance_manager.lock().await.list_proposals(None);
+    
+    let stats = serde_json::json!({
+        "validator_count": validators.len(),
+        "total_staked": total_staked.to_string(),
+        "proposal_count": proposals.len(),
+    });
+    
+    Json(JsonRpcResponse {
+        jsonrpc: "2.0".to_string(),
+        result: Some(stats),
+        error: None,
+        id: serde_json::Value::Number(1.into()),
+    })
+}
+
 /// Start the RPC server
 pub async fn start_rpc_server(state: RpcState, port: u16) -> Result<()> {
+    // Initialize Prometheus metrics
+    init_metrics();
+    metrics::NODE_HEALTH.set(1);
+
     let app = Router::new()
         .route("/", post(handle_rpc))
         .route("/health", get(health_check))
+        .route("/metrics", get(metrics_handler))
+        .route("/stats", get(stats_handler))
         .layer(CorsLayer::permissive())
         .with_state(state);
 
@@ -821,6 +862,11 @@ pub async fn start_rpc_server(state: RpcState, port: u16) -> Result<()> {
     println!("   - gov_getVote");
     println!("   - gov_getVotingPower");
     println!("   - gov_getTallyResult");
+    println!();
+    println!("📊 Monitoring endpoints:");
+    println!("   GET /health   - Node health check");
+    println!("   GET /metrics  - Prometheus metrics");
+    println!("   GET /stats    - Node statistics");
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;

@@ -737,3 +737,61 @@ mod tests {
         assert!(proposal.executed);
     }
 }
+
+// Persistence helper structures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GovernanceState {
+    pub proposals: Vec<Proposal>,
+    pub votes: Vec<(u64, String, Vote)>, // (proposal_id, voter, vote)
+    pub next_proposal_id: u64,
+}
+
+// Persistence methods for GovernanceManager
+impl GovernanceManager {
+    /// Serialize governance state to JSON for persistence
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        let mut votes_flat = Vec::new();
+        for (proposal_id, vote_map) in &self.votes {
+            for (voter, vote) in vote_map {
+                votes_flat.push((*proposal_id, voter.clone(), vote.clone()));
+            }
+        }
+        
+        let state = GovernanceState {
+            proposals: self.proposals.values().cloned().collect(),
+            votes: votes_flat,
+            next_proposal_id: self.next_proposal_id,
+        };
+        serde_json::to_string(&state)
+    }
+
+    /// Deserialize governance state from JSON
+    pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
+        let state: GovernanceState = serde_json::from_str(json)?;
+        let mut manager = GovernanceManager::new();
+        
+        manager.next_proposal_id = state.next_proposal_id;
+        for proposal in state.proposals {
+            manager.proposals.insert(proposal.id, proposal);
+        }
+        for (proposal_id, voter, vote) in state.votes {
+            manager.votes.entry(proposal_id)
+                .or_insert_with(HashMap::new)
+                .insert(voter, vote);
+        }
+        
+        Ok(manager)
+    }
+
+    /// Export state as bytes for RocksDB storage
+    pub fn to_bytes(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let json = self.to_json()?;
+        Ok(json.into_bytes())
+    }
+
+    /// Import state from bytes
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
+        let json = String::from_utf8(bytes.to_vec())?;
+        Ok(Self::from_json(&json)?)
+    }
+}

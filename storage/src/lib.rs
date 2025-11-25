@@ -128,6 +128,30 @@ impl BlockchainStorage {
         
         Ok(blocks)
     }
+    
+    /// Store staking state
+    pub fn store_staking_state(&self, state_bytes: &[u8]) -> Result<()> {
+        self.db.put(b"staking_state", state_bytes)?;
+        println!("💾 Stored staking state to database");
+        Ok(())
+    }
+    
+    /// Load staking state
+    pub fn load_staking_state(&self) -> Result<Option<Vec<u8>>> {
+        Ok(self.db.get(b"staking_state")?)
+    }
+    
+    /// Store governance state
+    pub fn store_governance_state(&self, state_bytes: &[u8]) -> Result<()> {
+        self.db.put(b"governance_state", state_bytes)?;
+        println!("💾 Stored governance state to database");
+        Ok(())
+    }
+    
+    /// Load governance state
+    pub fn load_governance_state(&self) -> Result<Option<Vec<u8>>> {
+        Ok(self.db.get(b"governance_state")?)
+    }
 }
 
 pub fn store_block(header: &BlockHeader, action: &Action, height: u64) -> Result<()> {

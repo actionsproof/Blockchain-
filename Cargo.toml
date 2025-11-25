@@ -13,8 +13,11 @@ members = [
     "cli-wallet",
     "explorer",
     "staking",
-    "governance"
+    "governance",
+    "act20-token",
+    "contracts/dex"
 ]
+resolver = "2"
 
 [profile.release]
 opt-level = 3
