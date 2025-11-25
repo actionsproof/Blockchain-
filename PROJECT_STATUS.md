@@ -252,12 +252,34 @@
 - ✅ Modern gradient design
 - ✅ Auto-refresh every 30 seconds
 
-### 5. Native Smart Contract System
-- [ ] Contract deployment via transactions
-- [ ] Contract state management
-- [ ] Contract-to-contract calls
-- [ ] Events and logs
-- [ ] Enhanced gas metering for contracts
+### 5. Native Smart Contract System ✅ (Phase 5.3 - COMPLETED)
+**Files**: `runtime/src/lib.rs`, `state/src/lib.rs`, `types/src/lib.rs`, `rpc/src/lib.rs`
+
+#### Event & Log System ✅
+- ✅ EventLog structure with topics and data
+- ✅ TransactionReceipt with event logs
+- ✅ Event storage indexed by contract address and topics
+- ✅ RPC method `act_getLogs` for event querying
+- ✅ RPC method `act_getTransactionReceipt` for receipts
+- ✅ Explorer UI displays event logs on transaction pages
+
+#### WASM Host Functions ✅
+- ✅ `emit_event()` - Emit event logs from contracts
+- ✅ `log()` - Debug logging
+- ✅ `storage_write()` - Write contract storage
+- ✅ `storage_read()` - Read contract storage
+- ✅ `call_contract()` - Call another contract
+- ✅ `get_caller()` - Get calling address
+- ✅ `get_balance()` - Query account balance
+- ✅ Gas metering for all host functions
+- ✅ Call depth limit (max 10) for recursion prevention
+
+#### Test Contract ✅
+**File**: `contracts/event-test/`
+- ✅ WASM contract that emits Transfer, Approval, ContractCreated events
+- ✅ Demonstrates host function usage
+- ✅ Compiled to wasm32-unknown-unknown target
+- ✅ Located at: `contracts/event-test/target/wasm32-unknown-unknown/release/event_test_contract.wasm`
 
 ---
 
@@ -315,16 +337,18 @@
 actionsproof-g/
 ├── node/          # P2P networking, main entry point, RPC integration
 ├── consensus/     # PoA consensus engine
-├── runtime/       # WASM execution engine
+├── runtime/       # WASM execution engine with event emission & contract calls
 ├── storage/       # RocksDB persistence
 ├── crypto/        # ACT addresses, signing, verification
-├── types/         # Transactions, blocks, accounts, ActAmount utilities
+├── types/         # Transactions, blocks, accounts, EventLog, TransactionReceipt
 ├── wallet/        # ACT wallet with BIP-39
-├── state/         # State manager (accounts, balances, nonces)
+├── state/         # State manager (accounts, balances, nonces, event logs, receipts)
 ├── mempool/       # Transaction pool with validation
-├── rpc/           # JSON-RPC 2.0 server (Axum)
+├── rpc/           # JSON-RPC 2.0 server (9 methods including act_getLogs)
 ├── cli-wallet/    # Command-line wallet tool (act-wallet)
-└── explorer/      # Block explorer backend + web UI (port 3001)
+├── explorer/      # Block explorer backend + web UI (port 3001, displays events)
+└── contracts/     # WASM smart contracts
+    └── event-test/ # Test contract with event emission
 ```
 
 ## 🚀 Deployment
@@ -346,8 +370,10 @@ actionsproof-g/
 
 ## 🎯 Next Immediate Steps
 
-1. **Enhanced Smart Contracts** - Events, logs, contract-to-contract calls
-2. **Deploy Explorer to Live Nodes** - Run explorer on all 3 VMs (port 3001)
+1. **Deploy Explorer to Live Nodes** - Build and run explorer on all 3 VMs (port 3001), configure firewall
+2. **Transaction Broadcasting** - Improve P2P transaction propagation across validators
+3. **Performance Optimization** - Add block indexing, caching layer, optimize database queries
+4. **Multi-Chain Compatibility** - Begin EVM compatibility layer implementation
 3. **Transaction Broadcasting** - Improved P2P transaction propagation
 4. **Performance Optimization** - Block indexing, caching, faster queries
 5. **EVM Compatibility** - Support Ethereum-style addresses and transactions
@@ -373,9 +399,10 @@ actionsproof-g/
 - **Tech Stack**: Rust + WASM + RocksDB + libp2p
 - **CLI Wallet**: `target/release/act-wallet` (see `CLI_WALLET.md`)
 - **Block Explorer**: `http://localhost:3001` (act-explorer)
+- **Test Contract**: `contracts/event-test/target/wasm32-unknown-unknown/release/event_test_contract.wasm`
 
 ---
 
 **Last Updated**: November 25, 2025
-**Current Phase**: Phase 5 - CLI Wallet & Block Explorer Complete
-**Next Phase**: Enhanced Smart Contracts & Live Deployment
+**Current Phase**: Phase 5.3 - Enhanced Smart Contracts Complete
+**Next Phase**: Deploy Explorer & Performance Optimization
