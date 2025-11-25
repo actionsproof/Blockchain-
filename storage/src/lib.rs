@@ -35,10 +35,17 @@ impl BlockchainStorage {
         
         self.db.put(key.as_bytes(), value)?;
         
+        // Store height -> hash index
+        let hash = &block.header.action_hash;
+        self.db.put(format!("height_to_hash_{}", block.height).as_bytes(), hash.as_bytes())?;
+        
+        // Store hash -> height index for reverse lookup
+        self.db.put(format!("hash_to_height_{}", hash).as_bytes(), block.height.to_be_bytes())?;
+        
         // Also store latest height
         self.db.put(b"latest_height", block.height.to_be_bytes())?;
         
-        println!("💾 Stored block {} to database", block.height);
+        println!("💾 Stored block {} (hash: {}...) to database", block.height, &hash[..16]);
         Ok(())
     }
 
@@ -84,6 +91,42 @@ impl BlockchainStorage {
             Some(height) => Ok(height + 1),
             None => Ok(0),
         }
+    }
+    
+    /// Get block by hash
+    pub fn get_block_by_hash(&self, hash: &str) -> Result<Option<StoredBlock>> {
+        // Look up height from hash
+        let height_key = format!("hash_to_height_{}", hash);
+        match self.db.get(height_key.as_bytes())? {
+            Some(height_bytes) if height_bytes.len() == 8 => {
+                let height = u64::from_be_bytes(height_bytes.as_slice().try_into().unwrap());
+                self.get_block(height)
+            }
+            _ => Ok(None),
+        }
+    }
+    
+    /// Get recent blocks (latest N blocks)
+    pub fn get_recent_blocks(&self, count: usize) -> Result<Vec<StoredBlock>> {
+        let latest_height = match self.get_latest_height()? {
+            Some(h) => h,
+            None => return Ok(vec![]),
+        };
+        
+        let mut blocks = Vec::new();
+        let start_height = if latest_height >= count as u64 {
+            latest_height - count as u64 + 1
+        } else {
+            0
+        };
+        
+        for height in start_height..=latest_height {
+            if let Some(block) = self.get_block(height)? {
+                blocks.push(block);
+            }
+        }
+        
+        Ok(blocks)
     }
 }
 

@@ -3,14 +3,36 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use std::time::{Duration, Instant};
 use storage::BlockchainStorage;
 use types::{Account, ActAmount, EventLog, Transaction, TransactionReceipt, TransactionType};
+
+/// Cache entry with TTL
+struct CacheEntry<T> {
+    value: T,
+    expires_at: Instant,
+}
+
+impl<T> CacheEntry<T> {
+    fn new(value: T, ttl: Duration) -> Self {
+        Self {
+            value,
+            expires_at: Instant::now() + ttl,
+        }
+    }
+    
+    fn is_expired(&self) -> bool {
+        Instant::now() > self.expires_at
+    }
+}
 
 /// State manager for ACT Chain accounts and balances
 pub struct StateManager {
     accounts: Arc<RwLock<HashMap<String, Account>>>,
     storage: Arc<BlockchainStorage>,
     receipts: Arc<RwLock<HashMap<String, TransactionReceipt>>>,  // tx_hash -> receipt
+    balance_cache: Arc<RwLock<HashMap<String, CacheEntry<ActAmount>>>>,  // address -> balance cache
+    nonce_cache: Arc<RwLock<HashMap<String, CacheEntry<u64>>>>,  // address -> nonce cache
 }
 
 impl StateManager {
@@ -19,6 +41,8 @@ impl StateManager {
             accounts: Arc::new(RwLock::new(HashMap::new())),
             storage,
             receipts: Arc::new(RwLock::new(HashMap::new())),
+            balance_cache: Arc::new(RwLock::new(HashMap::new())),
+            nonce_cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -72,14 +96,64 @@ impl StateManager {
 
     /// Get account balance
     pub fn get_balance(&self, address: &str) -> Result<ActAmount> {
+        // Check cache first
+        {
+            let cache = self.balance_cache.read().unwrap();
+            if let Some(entry) = cache.get(address) {
+                if !entry.is_expired() {
+                    return Ok(entry.value);
+                }
+            }
+        }
+        
+        // Cache miss or expired - get from state
         let account = self.get_account(address)?;
-        Ok(account.balance)
+        let balance = account.balance;
+        
+        // Update cache (5 second TTL)
+        {
+            let mut cache = self.balance_cache.write().unwrap();
+            cache.insert(address.to_string(), CacheEntry::new(balance, Duration::from_secs(5)));
+        }
+        
+        Ok(balance)
     }
 
     /// Get account nonce
     pub fn get_nonce(&self, address: &str) -> Result<u64> {
+        // Check cache first
+        {
+            let cache = self.nonce_cache.read().unwrap();
+            if let Some(entry) = cache.get(address) {
+                if !entry.is_expired() {
+                    return Ok(entry.value);
+                }
+            }
+        }
+        
+        // Cache miss or expired - get from state
         let account = self.get_account(address)?;
-        Ok(account.nonce)
+        let nonce = account.nonce;
+        
+        // Update cache (5 second TTL)
+        {
+            let mut cache = self.nonce_cache.write().unwrap();
+            cache.insert(address.to_string(), CacheEntry::new(nonce, Duration::from_secs(5)));
+        }
+        
+        Ok(nonce)
+    }
+    
+    /// Invalidate cache for an address (call after state changes)
+    fn invalidate_cache(&self, address: &str) {
+        {
+            let mut balance_cache = self.balance_cache.write().unwrap();
+            balance_cache.remove(address);
+        }
+        {
+            let mut nonce_cache = self.nonce_cache.write().unwrap();
+            nonce_cache.remove(address);
+        }
     }
 
     /// Transfer ACT between accounts
@@ -119,6 +193,10 @@ impl StateManager {
         self.save_account_to_storage(&from_account)?;
         self.save_account_to_storage(&to_account)?;
         
+        // Invalidate cache
+        self.invalidate_cache(from);
+        self.invalidate_cache(to);
+        
         println!("💸 Transfer: {} ACT from {} to {}", 
             amount as f64 / 1_000_000_000_000_000_000.0, from, to);
         
@@ -139,6 +217,9 @@ impl StateManager {
         
         drop(accounts);
         self.save_account_to_storage(&account)?;
+        
+        // Invalidate cache
+        self.invalidate_cache(address);
         
         Ok(())
     }
