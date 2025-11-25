@@ -12,6 +12,7 @@ use tower_http::cors::CorsLayer;
 
 use mempool::Mempool;
 use state::StateManager;
+use staking::StakingManager;
 use types::{ActAmount, EventLog, Transaction};
 
 /// RPC Server state
@@ -19,6 +20,7 @@ use types::{ActAmount, EventLog, Transaction};
 pub struct RpcState {
     pub state_manager: Arc<StateManager>,
     pub mempool: Arc<Mempool>,
+    pub staking_manager: Arc<tokio::sync::Mutex<StakingManager>>,
 }
 
 /// JSON-RPC 2.0 Request
@@ -82,6 +84,55 @@ pub struct MempoolStatus {
     pub avg_gas_price: ActAmount,
 }
 
+/// Staking deposit parameters
+#[derive(Debug, Deserialize)]
+pub struct StakeDepositParams {
+    pub address: String,
+    pub amount: u64,
+    pub commission_rate: u8,
+}
+
+/// Delegate parameters
+#[derive(Debug, Deserialize)]
+pub struct DelegateParams {
+    pub delegator_address: String,
+    pub validator_address: String,
+    pub amount: u64,
+}
+
+/// Unstake parameters
+#[derive(Debug, Deserialize)]
+pub struct UnstakeParams {
+    pub address: String,
+    pub amount: u64,
+}
+
+/// Undelegate parameters
+#[derive(Debug, Deserialize)]
+pub struct UndelegateParams {
+    pub delegator_address: String,
+    pub validator_address: String,
+    pub amount: u64,
+}
+
+/// Claim parameters
+#[derive(Debug, Deserialize)]
+pub struct ClaimParams {
+    pub address: String,
+}
+
+/// Get validator parameters
+#[derive(Debug, Deserialize)]
+pub struct GetValidatorParams {
+    pub address: String,
+}
+
+/// Get validators parameters
+#[derive(Debug, Deserialize)]
+pub struct GetValidatorsParams {
+    pub active_only: bool,
+}
+
 /// Get logs parameters
 #[derive(Debug, Deserialize)]
 pub struct GetLogsParams {
@@ -100,10 +151,11 @@ pub struct GetReceiptParams {
 }
 
 impl RpcState {
-    pub fn new(state_manager: Arc<StateManager>, mempool: Arc<Mempool>) -> Self {
+    pub fn new(state_manager: Arc<StateManager>, mempool: Arc<Mempool>, staking_manager: Arc<tokio::sync::Mutex<StakingManager>>) -> Self {
         Self {
             state_manager,
             mempool,
+            staking_manager,
         }
     }
 }
@@ -354,6 +406,144 @@ async fn handle_rpc(
                 .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
         }
 
+        // Staking methods
+        "stake_deposit" => {
+            let params: StakeDepositParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let mut staking = state.staking_manager.lock().await;
+            let validator_address = staking
+                .stake(params.address, params.amount, params.commission_rate)
+                .map_err(|e| RpcError(format!("Stake failed: {}", e)))?;
+            
+            serde_json::to_value(validator_address)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "stake_delegate" => {
+            let params: DelegateParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let mut staking = state.staking_manager.lock().await;
+            staking
+                .delegate(params.delegator_address, params.validator_address, params.amount)
+                .map_err(|e| RpcError(format!("Delegation failed: {}", e)))?;
+            
+            serde_json::to_value("Delegation successful")
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "stake_unstake" => {
+            let params: UnstakeParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let mut staking = state.staking_manager.lock().await;
+            let request_id = staking
+                .unstake(params.address, params.amount)
+                .map_err(|e| RpcError(format!("Unstake failed: {}", e)))?;
+            
+            serde_json::to_value(request_id)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "stake_undelegate" => {
+            let params: UndelegateParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let mut staking = state.staking_manager.lock().await;
+            let request_id = staking
+                .undelegate(params.delegator_address, params.validator_address, params.amount)
+                .map_err(|e| RpcError(format!("Undelegation failed: {}", e)))?;
+            
+            serde_json::to_value(request_id)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "stake_claimUnstaked" => {
+            let params: ClaimParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let mut staking = state.staking_manager.lock().await;
+            let amount = staking
+                .claim_unstaked(params.address)
+                .map_err(|e| RpcError(format!("Claim failed: {}", e)))?;
+            
+            serde_json::to_value(amount)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "stake_claimRewards" => {
+            let params: ClaimParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let mut staking = state.staking_manager.lock().await;
+            let rewards = staking
+                .claim_rewards(params.address)
+                .map_err(|e| RpcError(format!("Claim rewards failed: {}", e)))?;
+            
+            serde_json::to_value(rewards)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "stake_getValidator" => {
+            let params: GetValidatorParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let staking = state.staking_manager.lock().await;
+            let validator = staking.get_validator(&params.address);
+            
+            serde_json::to_value(validator)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "stake_getValidators" => {
+            let params: GetValidatorsParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let staking = state.staking_manager.lock().await;
+            let validators = if params.active_only {
+                staking.get_active_validators()
+            } else {
+                staking.get_all_validators()
+            };
+            
+            serde_json::to_value(validators)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "stake_getDelegations" => {
+            let params: ClaimParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let staking = state.staking_manager.lock().await;
+            let delegations = staking.get_delegations(&params.address);
+            
+            serde_json::to_value(delegations)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "stake_getUnstakeRequests" => {
+            let params: ClaimParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let staking = state.staking_manager.lock().await;
+            let requests = staking.get_unstake_requests(&params.address);
+            
+            serde_json::to_value(requests)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "stake_getRewards" => {
+            let params: ClaimParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let staking = state.staking_manager.lock().await;
+            let rewards = staking.get_unclaimed_rewards(&params.address);
+            
+            serde_json::to_value(rewards)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
         _ => {
             return Err(RpcError(format!("Method not found: {}", request.method)));
         }
@@ -396,6 +586,19 @@ pub async fn start_rpc_server(state: RpcState, port: u16) -> Result<()> {
     println!("   - eth_call");
     println!("   - eth_chainId");
     println!("   - net_version");
+    println!();
+    println!("   Staking:");
+    println!("   - stake_deposit");
+    println!("   - stake_delegate");
+    println!("   - stake_unstake");
+    println!("   - stake_undelegate");
+    println!("   - stake_claimUnstaked");
+    println!("   - stake_claimRewards");
+    println!("   - stake_getValidator");
+    println!("   - stake_getValidators");
+    println!("   - stake_getDelegations");
+    println!("   - stake_getUnstakeRequests");
+    println!("   - stake_getRewards");
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;

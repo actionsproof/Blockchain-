@@ -15,3 +15,4 @@ state = { path = "../state" }
 mempool = { path = "../mempool" }
 storage = { path = "../storage" }
 wallet = { path = "../wallet" }
+staking = { path = "../staking" }
