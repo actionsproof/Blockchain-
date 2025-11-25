@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT Chain Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .search-box {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 1.1em;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            transition: border-color 0.3s;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .search-hint {
+            margin-top: 10px;
+            color: #999;
+            font-size: 0.9em;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .stat-label {
+            color: #999;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            color: #333;
+            font-size: 2em;
+            font-weight: bold;
+        }
+        
+        .content-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .blocks-list {
+            list-style: none;
+        }
+        
+        .block-item {
+            padding: 20px;
+            border: 2px solid #f0f0f0;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .block-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+        
+        .block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .block-height {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .block-time {
+            color: #999;
+            font-size: 0.9em;
+        }
+        
+        .block-details {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        
+        .hash {
+            font-family: 'Courier New', monospace;
+            background: #f5f5f5;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 1.2em;
+        }
+        
+        .error {
+            background: #fee;
+            border: 2px solid #fcc;
+            border-radius: 10px;
+            padding: 20px;
+            color: #c00;
+            margin-bottom: 20px;
+        }
+        
+        .result-section {
+            display: none;
+        }
+        
+        .result-section.active {
+            display: block;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .info-value {
+            color: #333;
+            text-align: right;
+            max-width: 60%;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 ACT Chain Explorer</h1>
+            <p class="subtitle">Explore blocks, transactions, and accounts on the ACT blockchain</p>
+        </header>
+        
+        <div class="search-box">
+            <input type="text" 
+                   class="search-input" 
+                   id="searchInput" 
+                   placeholder="Search by block height, transaction hash, or account address..."
+                   onkeypress="if(event.key === 'Enter') search()">
+            <p class="search-hint">
+                Try: Block height (e.g., 100), Transaction hash (0x...), or Account address (ACT-...)
+            </p>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Latest Block</div>
+                <div class="stat-value" id="latestBlock">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Transactions</div>
+                <div class="stat-value" id="totalTxs">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Pending Transactions</div>
+                <div class="stat-value" id="pendingTxs">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Block Time</div>
+                <div class="stat-value" id="avgBlockTime">-</div>
+            </div>
+        </div>
+        
+        <div id="errorContainer"></div>
+        
+        <div class="content-section result-section" id="searchResults">
+            <h2>Search Results</h2>
+            <div id="resultContent"></div>
+        </div>
+        
+        <div class="content-section">
+            <h2>Latest Blocks</h2>
+            <div id="blocksContainer" class="loading">Loading blocks...</div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = window.location.origin + '/api';
+        
+        async function fetchStats() {
+            try {
+                const response = await fetch(`${API_BASE}/stats`);
+                const stats = await response.json();
+                
+                document.getElementById('latestBlock').textContent = stats.latest_block.toLocaleString();
+                document.getElementById('totalTxs').textContent = stats.total_transactions.toLocaleString();
+                document.getElementById('pendingTxs').textContent = stats.pending_transactions.toLocaleString();
+                document.getElementById('avgBlockTime').textContent = stats.avg_block_time + 's';
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+            }
+        }
+        
+        async function fetchLatestBlocks() {
+            try {
+                const response = await fetch(`${API_BASE}/blocks`);
+                const blocks = await response.json();
+                
+                const container = document.getElementById('blocksContainer');
+                container.innerHTML = '<ul class="blocks-list">' + 
+                    blocks.map(block => `
+                        <li class="block-item" onclick="viewBlock(${block.height})">
+                            <div class="block-header">
+                                <span class="block-height">Block #${block.height}</span>
+                                <span class="block-time">${formatTimestamp(block.timestamp)}</span>
+                            </div>
+                            <div class="block-details">
+                                Hash: <span class="hash">${block.hash.substring(0, 20)}...</span><br>
+                                Validator: <span class="hash">${block.validator.substring(0, 30)}...</span><br>
+                                Transactions: ${block.transaction_count} | Reward: ${formatACT(block.reward)} ACT
+                            </div>
+                        </li>
+                    `).join('') + 
+                    '</ul>';
+            } catch (error) {
+                document.getElementById('blocksContainer').innerHTML = 
+                    '<div class="error">Error loading blocks: ' + error.message + '</div>';
+            }
+        }
+        
+        async function search() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+            
+            const resultsSection = document.getElementById('searchResults');
+            const resultContent = document.getElementById('resultContent');
+            const errorContainer = document.getElementById('errorContainer');
+            
+            errorContainer.innerHTML = '';
+            resultContent.innerHTML = '<div class="loading">Searching...</div>';
+            resultsSection.classList.add('active');
+            
+            try {
+                const response = await fetch(`${API_BASE}/search/${encodeURIComponent(query)}`);
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Search failed');
+                }
+                
+                const result = await response.json();
+                
+                if (result.type === 'Block') {
+                    resultContent.innerHTML = renderBlock(result);
+                } else if (result.type === 'Transaction') {
+                    resultContent.innerHTML = renderTransaction(result);
+                } else if (result.type === 'Account') {
+                    resultContent.innerHTML = renderAccount(result);
+                }
+            } catch (error) {
+                errorContainer.innerHTML = `<div class="error">❌ ${error.message}</div>`;
+                resultsSection.classList.remove('active');
+            }
+        }
+        
+        function renderBlock(block) {
+            return `
+                <div class="info-row">
+                    <span class="info-label">Block Height:</span>
+                    <span class="info-value">${block.height}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Hash:</span>
+                    <span class="info-value hash">${block.hash}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Parent Hash:</span>
+                    <span class="info-value hash">${block.parent_hash}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Timestamp:</span>
+                    <span class="info-value">${formatTimestamp(block.timestamp)}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Validator:</span>
+                    <span class="info-value hash">${block.validator}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Transactions:</span>
+                    <span class="info-value">${block.transaction_count}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Reward:</span>
+                    <span class="info-value">${formatACT(block.reward)} ACT</span>
+                </div>
+            `;
+        }
+        
+        function renderTransaction(tx) {
+            return `
+                <div class="info-row">
+                    <span class="info-label">Hash:</span>
+                    <span class="info-value hash">${tx.hash}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">From:</span>
+                    <span class="info-value hash">${tx.from}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Type:</span>
+                    <span class="info-value">${tx.tx_type}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Nonce:</span>
+                    <span class="info-value">${tx.nonce}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Gas Limit:</span>
+                    <span class="info-value">${tx.gas_limit.toLocaleString()}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Gas Price:</span>
+                    <span class="info-value">${tx.gas_price}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Status:</span>
+                    <span class="info-value">${tx.status}</span>
+                </div>
+            `;
+        }
+        
+        function renderAccount(account) {
+            return `
+                <div class="info-row">
+                    <span class="info-label">Address:</span>
+                    <span class="info-value hash">${account.address}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Balance:</span>
+                    <span class="info-value">${formatACT(account.balance)} ACT</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Nonce:</span>
+                    <span class="info-value">${account.nonce}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Type:</span>
+                    <span class="info-value">${account.is_contract ? 'Contract' : 'External Account'}</span>
+                </div>
+                ${account.code_hash ? `
+                <div class="info-row">
+                    <span class="info-label">Code Hash:</span>
+                    <span class="info-value hash">${account.code_hash}</span>
+                </div>
+                ` : ''}
+            `;
+        }
+        
+        function viewBlock(height) {
+            document.getElementById('searchInput').value = height;
+            search();
+        }
+        
+        function formatTimestamp(timestamp) {
+            return new Date(timestamp * 1000).toLocaleString();
+        }
+        
+        function formatACT(amount) {
+            return (amount / 1e18).toFixed(6);
+        }
+        
+        // Initial load
+        fetchStats();
+        fetchLatestBlocks();
+        
+        // Refresh every 30 seconds
+        setInterval(() => {
+            fetchStats();
+            fetchLatestBlocks();
+        }, 30000);
+    </script>
+</body>
+</html>

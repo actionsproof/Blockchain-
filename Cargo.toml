@@ -10,7 +10,8 @@ members = [
     "state",
     "mempool",
     "rpc",
-    "cli-wallet"
+    "cli-wallet",
+    "explorer"
 ]
 
 [profile.release]
