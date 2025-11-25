@@ -1,8 +1,10 @@
 use anyhow::{anyhow, Result};
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use rand::{rngs::OsRng, Rng};
+use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use tiny_keccak::{Hasher, Keccak};
 
 /// ACT Chain native address format
 /// Format: ACT-{base58(pubkey_hash)}
@@ -138,6 +140,143 @@ pub fn hash_data(data: &[u8]) -> Vec<u8> {
     let mut hasher = Sha256::new();
     hasher.update(data);
     hasher.finalize().to_vec()
+}
+
+/// Ethereum-style address format (0x...)
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct EthAddress(pub String);
+
+impl EthAddress {
+    /// Create Ethereum address from public key (last 20 bytes of keccak256 hash)
+    pub fn from_pubkey(pubkey: &[u8]) -> Self {
+        let mut hasher = Keccak::v256();
+        hasher.update(pubkey);
+        let mut hash = [0u8; 32];
+        hasher.finalize(&mut hash);
+        
+        // Take last 20 bytes
+        let address_bytes = &hash[12..];
+        let address = format!("0x{}", hex::encode(address_bytes));
+        
+        EthAddress(address)
+    }
+    
+    pub fn from_string(s: &str) -> Result<Self> {
+        if !s.starts_with("0x") || s.len() != 42 {
+            return Err(anyhow!("Invalid Ethereum address format"));
+        }
+        Ok(EthAddress(s.to_lowercase()))
+    }
+    
+    pub fn to_bytes(&self) -> Result<[u8; 20]> {
+        let hex_str = self.0.trim_start_matches("0x");
+        let bytes = hex::decode(hex_str)?;
+        let mut arr = [0u8; 20];
+        arr.copy_from_slice(&bytes);
+        Ok(arr)
+    }
+}
+
+impl std::fmt::Display for EthAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// Ethereum-compatible keypair (secp256k1)
+#[derive(Debug, Clone)]
+pub struct EthKeyPair {
+    pub secret_key: SecretKey,
+    pub public_key: PublicKey,
+    pub address: EthAddress,
+}
+
+impl EthKeyPair {
+    /// Generate new Ethereum keypair
+    pub fn generate() -> Result<Self> {
+        let secp = Secp256k1::new();
+        let (secret_key, public_key) = secp.generate_keypair(&mut OsRng);
+        
+        // Get uncompressed public key (65 bytes, skip first byte)
+        let pubkey_bytes = public_key.serialize_uncompressed();
+        let pubkey_hash = &pubkey_bytes[1..]; // Skip 0x04 prefix
+        
+        let address = EthAddress::from_pubkey(pubkey_hash);
+        
+        Ok(Self {
+            secret_key,
+            public_key,
+            address,
+        })
+    }
+    
+    /// Create from secret key bytes
+    pub fn from_secret_bytes(secret_bytes: &[u8; 32]) -> Result<Self> {
+        let secp = Secp256k1::new();
+        let secret_key = SecretKey::from_slice(secret_bytes)?;
+        let public_key = PublicKey::from_secret_key(&secp, &secret_key);
+        
+        let pubkey_bytes = public_key.serialize_uncompressed();
+        let pubkey_hash = &pubkey_bytes[1..];
+        let address = EthAddress::from_pubkey(pubkey_hash);
+        
+        Ok(Self {
+            secret_key,
+            public_key,
+            address,
+        })
+    }
+    
+    /// Sign message with Ethereum signature
+    pub fn sign(&self, message: &[u8]) -> Result<Vec<u8>> {
+        let secp = Secp256k1::new();
+        
+        // Ethereum uses keccak256 for message hashing
+        let mut hasher = Keccak::v256();
+        hasher.update(message);
+        let mut hash = [0u8; 32];
+        hasher.finalize(&mut hash);
+        
+        let message = Message::from_digest(hash);
+        let signature = secp.sign_ecdsa(&message, &self.secret_key);
+        
+        Ok(signature.serialize_compact().to_vec())
+    }
+    
+    /// Get address
+    pub fn address(&self) -> &EthAddress {
+        &self.address
+    }
+}
+
+/// Verify Ethereum signature
+pub fn verify_eth_signature(
+    pubkey_bytes: &[u8],
+    message: &[u8],
+    signature: &[u8],
+) -> Result<bool> {
+    let secp = Secp256k1::new();
+    
+    // Hash message with keccak256
+    let mut hasher = Keccak::v256();
+    hasher.update(message);
+    let mut hash = [0u8; 32];
+    hasher.finalize(&mut hash);
+    
+    let message = Message::from_digest(hash);
+    let signature = secp256k1::ecdsa::Signature::from_compact(signature)?;
+    let pubkey = PublicKey::from_slice(pubkey_bytes)?;
+    
+    Ok(secp.verify_ecdsa(&message, &signature, &pubkey).is_ok())
+}
+
+/// Keccak256 hash (Ethereum-style)
+pub fn keccak256(data: &[u8]) -> [u8; 32] {
+    let mut hasher = Keccak::v256();
+    hasher.update(data);
+    let mut hash = [0u8; 32];
+    hasher.finalize(&mut hash);
+    hash
 }
 
 #[cfg(test)]

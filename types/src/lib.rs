@@ -1,5 +1,35 @@
 use serde::{Serialize, Deserialize};
 
+/// Multi-chain address support
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub enum Address {
+    Act(String),      // ACT-native: ACT-{base58}
+    Ethereum(String), // Ethereum: 0x{hex}
+}
+
+impl Address {
+    pub fn to_string(&self) -> String {
+        match self {
+            Address::Act(addr) => addr.clone(),
+            Address::Ethereum(addr) => addr.clone(),
+        }
+    }
+    
+    pub fn is_ethereum(&self) -> bool {
+        matches!(self, Address::Ethereum(_))
+    }
+    
+    pub fn is_act(&self) -> bool {
+        matches!(self, Address::Act(_))
+    }
+}
+
+impl std::fmt::Display for Address {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+
 /// Native ACT token amount (in smallest unit: 1 ACT = 10^18 units)
 pub type ActAmount = u128;
 
@@ -31,6 +61,12 @@ pub enum TransactionType {
         contract: String,
         method: String,
         args: Vec<u8>,
+    },
+    EthereumLegacy {
+        to: String,
+        value: ActAmount,
+        data: Vec<u8>,
+        gas_price: ActAmount,
     },
 }
 

@@ -479,6 +479,10 @@ pub fn calculate_gas_cost(tx: &Transaction, gas_config: &GasConfig) -> u64 {
         TransactionType::ContractCall { args, .. } => {
             gas_config.contract_call_base + (args.len() as u64 * 100)
         }
+        TransactionType::EthereumLegacy { data, .. } => {
+            // Ethereum legacy transaction gas calculation
+            gas_config.transfer_cost + (data.len() as u64 * 16)
+        }
     }
 }
 

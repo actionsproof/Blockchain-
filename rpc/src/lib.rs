@@ -288,6 +288,72 @@ async fn handle_rpc(
                 .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
         }
 
+        // Ethereum-compatible RPC methods
+        "eth_blockNumber" => {
+            // Return latest block height in hex
+            let height = 0u64; // TODO: Get from storage
+            serde_json::to_value(format!("0x{:x}", height))
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "eth_getBalance" => {
+            let params: serde_json::Value = request.params;
+            let address = params
+                .get(0)
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| RpcError("Missing address parameter".to_string()))?;
+            
+            // Convert Ethereum address to ACT address or query directly
+            let balance = state
+                .state_manager
+                .get_balance(address)
+                .unwrap_or(0);
+            
+            // Return balance in hex
+            serde_json::to_value(format!("0x{:x}", balance))
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "eth_getTransactionCount" => {
+            let params: serde_json::Value = request.params;
+            let address = params
+                .get(0)
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| RpcError("Missing address parameter".to_string()))?;
+            
+            let nonce = state
+                .state_manager
+                .get_nonce(address)
+                .unwrap_or(0);
+            
+            serde_json::to_value(format!("0x{:x}", nonce))
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "eth_sendRawTransaction" => {
+            // TODO: Decode RLP-encoded Ethereum transaction
+            serde_json::to_value("0x0000000000000000000000000000000000000000000000000000000000000000")
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "eth_call" => {
+            // TODO: Execute read-only contract call
+            serde_json::to_value("0x")
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "eth_chainId" => {
+            // Return ACT Chain ID (e.g., 0xACT = 2755)
+            serde_json::to_value("0xac7")
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "net_version" => {
+            // Network version (same as chain ID)
+            serde_json::to_value("2755")
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
         _ => {
             return Err(RpcError(format!("Method not found: {}", request.method)));
         }
@@ -312,6 +378,7 @@ pub async fn start_rpc_server(state: RpcState, port: u16) -> Result<()> {
     let addr = format!("0.0.0.0:{}", port);
     println!("🌐 RPC server starting on http://{}", addr);
     println!("📡 Available methods:");
+    println!("   ACT Native:");
     println!("   - act_getBalance");
     println!("   - act_getAccount");
     println!("   - act_getNonce");
@@ -319,6 +386,16 @@ pub async fn start_rpc_server(state: RpcState, port: u16) -> Result<()> {
     println!("   - act_getTransaction");
     println!("   - act_getPendingTransactions");
     println!("   - act_getMempoolStatus");
+    println!("   - act_getLogs");
+    println!("   - act_getTransactionReceipt");
+    println!("   Ethereum Compatible:");
+    println!("   - eth_blockNumber");
+    println!("   - eth_getBalance");
+    println!("   - eth_getTransactionCount");
+    println!("   - eth_sendRawTransaction");
+    println!("   - eth_call");
+    println!("   - eth_chainId");
+    println!("   - net_version");
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
