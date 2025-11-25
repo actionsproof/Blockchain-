@@ -193,7 +193,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 // Process transactions and update state
                 for tx in &txs {
                     let tx_hash = tx.hash();
-                    println!("  ✅ Including tx {}... from {}", &tx_hash[..16], &tx.from[..15]);
+                    println!("  ⚡ Including tx {}... from {}", &tx_hash[..16], tx.from.to_string());
                     
                     // Calculate transaction fee
                     let tx_fee = (tx.gas_limit as u64) * (tx.gas_price as u64);
@@ -202,7 +202,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     // Execute transaction
                     match &tx.tx_type {
                         TransactionType::Transfer { to, amount } => {
-                            if let Err(e) = state_for_blocks.transfer(&tx.from, to, *amount) {
+                            if let Err(e) = state_for_blocks.transfer(&tx.from.to_string(), to, *amount) {
                                 eprintln!("     ⚠️  Transfer failed: {}", e);
                                 continue;
                             }
