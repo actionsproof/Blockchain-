@@ -360,23 +360,26 @@ actionsproof-g/
 - **Repository**: `actionsproof/Blockchain-`
 
 **Live RPC Endpoints:**
-- Node 1: `http://107.178.223.1:8545` (Block height: 40+)
-- Node 2: `http://34.70.254.28:8545` (Block height: 1+)
-- Node 3: `http://34.118.200.106:8545` (Block height: 1+)
+- Node 1: `http://107.178.223.1:8545` 
+- Node 2: `http://34.70.254.28:8545` 
+- Node 3: `http://34.118.200.106:8545` 
 
-**Firewall:** Port 8545 open (rule: `act-blockchain-rpc`)
+**Live Block Explorers (Port 3001):**
+- Node 1: `http://107.178.223.1:3001` ✅
+- Node 2: `http://34.70.254.28:3001` ✅
+- Node 3: `http://34.118.200.106:3001` ✅
+
+**Firewall Rules:** 
+- Port 8545 (RPC): `act-blockchain-rpc`
+- Port 3001 (Explorer): `act-blockchain-explorer`
 
 ---
 
 ## 🎯 Next Immediate Steps
 
-1. **Deploy Explorer to Live Nodes** - Build and run explorer on all 3 VMs (port 3001), configure firewall
-2. **Transaction Broadcasting** - Improve P2P transaction propagation across validators
-3. **Performance Optimization** - Add block indexing, caching layer, optimize database queries
-4. **Multi-Chain Compatibility** - Begin EVM compatibility layer implementation
-3. **Transaction Broadcasting** - Improved P2P transaction propagation
-4. **Performance Optimization** - Block indexing, caching, faster queries
-5. **EVM Compatibility** - Support Ethereum-style addresses and transactions
+1. **Deploy Optimized Node Binaries** - Rebuild and redeploy nodes with performance improvements
+2. **Multi-Chain Compatibility** - Begin EVM compatibility layer implementation
+3. **Advanced Features** - Staking, governance, cross-chain bridges
 
 ---
 
@@ -398,11 +401,11 @@ actionsproof-g/
 - **Live Nodes**: 3 VMs on Google Cloud
 - **Tech Stack**: Rust + WASM + RocksDB + libp2p
 - **CLI Wallet**: `target/release/act-wallet` (see `CLI_WALLET.md`)
-- **Block Explorer**: `http://localhost:3001` (act-explorer)
+- **Block Explorer**: Live on all 3 nodes at port 3001
 - **Test Contract**: `contracts/event-test/target/wasm32-unknown-unknown/release/event_test_contract.wasm`
 
 ---
 
 **Last Updated**: November 25, 2025
-**Current Phase**: Phase 5.3 - Enhanced Smart Contracts Complete
-**Next Phase**: Deploy Explorer & Performance Optimization
+**Current Phase**: Phase 5 Complete - Smart Contracts, Explorer, Performance Optimizations
+**Next Phase**: Multi-Chain Compatibility & Advanced Features
