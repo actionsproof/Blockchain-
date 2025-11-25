@@ -91,7 +91,7 @@ async fn main() -> Result<()> {
         .layer(CorsLayer::permissive())
         .with_state(state);
     
-    let addr = "0.0.0.0:3000";
+    let addr = "0.0.0.0:3001";
     println!("🌐 Block Explorer API running on http://{}", addr);
     println!("📊 Available endpoints:");
     println!("   GET /                          - Web UI");
