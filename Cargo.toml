@@ -12,7 +12,8 @@ members = [
     "rpc",
     "cli-wallet",
     "explorer",
-    "staking"
+    "staking",
+    "governance"
 ]
 
 [profile.release]

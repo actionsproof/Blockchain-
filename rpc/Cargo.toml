@@ -16,3 +16,4 @@ mempool = { path = "../mempool" }
 storage = { path = "../storage" }
 wallet = { path = "../wallet" }
 staking = { path = "../staking" }
+governance = { path = "../governance" }

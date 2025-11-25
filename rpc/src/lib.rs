@@ -13,6 +13,7 @@ use tower_http::cors::CorsLayer;
 use mempool::Mempool;
 use state::StateManager;
 use staking::StakingManager;
+use governance::GovernanceManager;
 use types::{ActAmount, EventLog, Transaction};
 
 /// RPC Server state
@@ -21,6 +22,7 @@ pub struct RpcState {
     pub state_manager: Arc<StateManager>,
     pub mempool: Arc<Mempool>,
     pub staking_manager: Arc<tokio::sync::Mutex<StakingManager>>,
+    pub governance_manager: Arc<tokio::sync::Mutex<GovernanceManager>>,
 }
 
 /// JSON-RPC 2.0 Request
@@ -133,6 +135,55 @@ pub struct GetValidatorsParams {
     pub active_only: bool,
 }
 
+/// Governance propose parameters
+#[derive(Debug, Deserialize)]
+pub struct ProposeParams {
+    pub proposer: String,
+    pub proposal_type: serde_json::Value,
+    pub title: String,
+    pub description: String,
+}
+
+/// Governance vote parameters
+#[derive(Debug, Deserialize)]
+pub struct VoteParams {
+    pub proposal_id: u64,
+    pub voter: String,
+    pub vote_option: String,
+}
+
+/// Get proposal parameters
+#[derive(Debug, Deserialize)]
+pub struct GetProposalParams {
+    pub proposal_id: u64,
+}
+
+/// List proposals parameters
+#[derive(Debug, Deserialize)]
+pub struct ListProposalsParams {
+    pub status: Option<String>,
+}
+
+/// Get vote parameters
+#[derive(Debug, Deserialize)]
+pub struct GetVoteParams {
+    pub proposal_id: u64,
+    pub voter: String,
+}
+
+/// Get voting power parameters
+#[derive(Debug, Deserialize)]
+pub struct GetVotingPowerParams {
+    pub address: String,
+    pub snapshot_height: Option<u64>,
+}
+
+/// Get tally result parameters
+#[derive(Debug, Deserialize)]
+pub struct GetTallyParams {
+    pub proposal_id: u64,
+}
+
 /// Get logs parameters
 #[derive(Debug, Deserialize)]
 pub struct GetLogsParams {
@@ -151,11 +202,12 @@ pub struct GetReceiptParams {
 }
 
 impl RpcState {
-    pub fn new(state_manager: Arc<StateManager>, mempool: Arc<Mempool>, staking_manager: Arc<tokio::sync::Mutex<StakingManager>>) -> Self {
+    pub fn new(state_manager: Arc<StateManager>, mempool: Arc<Mempool>, staking_manager: Arc<tokio::sync::Mutex<StakingManager>>, governance_manager: Arc<tokio::sync::Mutex<GovernanceManager>>) -> Self {
         Self {
             state_manager,
             mempool,
             staking_manager,
+            governance_manager,
         }
     }
 }
@@ -544,6 +596,167 @@ async fn handle_rpc(
                 .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
         }
 
+        // Governance methods
+        "gov_propose" => {
+            let params: ProposeParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let proposal_type: governance::ProposalType = serde_json::from_value(params.proposal_type)
+                .map_err(|e| RpcError(format!("Invalid proposal type: {}", e)))?;
+            
+            let proposer_balance = state
+                .state_manager
+                .get_balance(&params.proposer)
+                .unwrap_or(0);
+            
+            // TODO: Get actual total supply from state
+            let total_supply = 13_000_000_000_000_000; // Placeholder
+            
+            let mut governance = state.governance_manager.lock().await;
+            let proposal_id = governance
+                .create_proposal(
+                    params.proposer,
+                    proposal_type,
+                    params.title,
+                    params.description,
+                    proposer_balance.try_into().unwrap_or(u64::MAX),
+                    total_supply,
+                )
+                .map_err(|e| RpcError(format!("Proposal creation failed: {}", e)))?;;
+            
+            serde_json::to_value(proposal_id)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "gov_vote" => {
+            let params: VoteParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let vote_option = match params.vote_option.as_str() {
+                "Yes" => governance::VoteOption::Yes,
+                "No" => governance::VoteOption::No,
+                "Abstain" => governance::VoteOption::Abstain,
+                _ => return Err(RpcError("Invalid vote option. Use 'Yes', 'No', or 'Abstain'".to_string())),
+            };
+            
+            // Calculate vote power (balance + staking)
+            let balance = state
+                .state_manager
+                .get_balance(&params.voter)
+                .unwrap_or(0);
+            
+            let staking = state.staking_manager.lock().await;
+            let validator_stake = staking
+                .get_validator(&params.voter)
+                .map(|v| v.stake + v.delegated_stake)
+                .unwrap_or(0);
+            
+            let delegator_stake: u64 = staking
+                .get_delegations(&params.voter)
+                .iter()
+                .map(|d| d.amount)
+                .sum();
+            
+            let vote_power = balance + (validator_stake as u128) + (delegator_stake as u128);
+            drop(staking);
+            
+            let mut governance = state.governance_manager.lock().await;
+            governance
+                .cast_vote(params.proposal_id, params.voter, vote_option, vote_power.try_into().unwrap_or(u64::MAX))
+                .map_err(|e| RpcError(format!("Vote failed: {}", e)))?;;
+            
+            serde_json::to_value("Vote cast successfully")
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "gov_getProposal" => {
+            let params: GetProposalParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let governance = state.governance_manager.lock().await;
+            let proposal = governance.get_proposal(params.proposal_id);
+            
+            serde_json::to_value(proposal)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "gov_listProposals" => {
+            let params: ListProposalsParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let status_filter = params.status.and_then(|s| {
+                match s.as_str() {
+                    "Review" => Some(governance::ProposalStatus::Review),
+                    "Active" => Some(governance::ProposalStatus::Active),
+                    "Passed" => Some(governance::ProposalStatus::Passed),
+                    "Rejected" => Some(governance::ProposalStatus::Rejected),
+                    "Expired" => Some(governance::ProposalStatus::Expired),
+                    "Executed" => Some(governance::ProposalStatus::Executed),
+                    "Failed" => Some(governance::ProposalStatus::Failed),
+                    "Vetoed" => Some(governance::ProposalStatus::Vetoed),
+                    _ => None,
+                }
+            });
+            
+            let governance = state.governance_manager.lock().await;
+            let proposals = governance.list_proposals(status_filter);
+            
+            serde_json::to_value(proposals)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "gov_getVote" => {
+            let params: GetVoteParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let governance = state.governance_manager.lock().await;
+            let vote = governance.get_vote(params.proposal_id, &params.voter);
+            
+            serde_json::to_value(vote)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "gov_getVotingPower" => {
+            let params: GetVotingPowerParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            // Calculate voting power
+            let balance = state
+                .state_manager
+                .get_balance(&params.address)
+                .unwrap_or(0);
+            
+            let staking = state.staking_manager.lock().await;
+            let validator_stake = staking
+                .get_validator(&params.address)
+                .map(|v| v.stake + v.delegated_stake)
+                .unwrap_or(0);
+            
+            let delegator_stake: u64 = staking
+                .get_delegations(&params.address)
+                .iter()
+                .map(|d| d.amount)
+                .sum();
+            
+            let total_power = balance + (validator_stake as u128) + (delegator_stake as u128);
+            
+            serde_json::to_value(total_power)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
+        "gov_getTallyResult" => {
+            let params: GetTallyParams = serde_json::from_value(request.params)
+                .map_err(|e| RpcError(format!("Invalid params: {}", e)))?;
+            
+            let governance = state.governance_manager.lock().await;
+            let tally = governance
+                .get_tally_result(params.proposal_id)
+                .map_err(|e| RpcError(format!("Failed to get tally: {}", e)))?;
+            
+            serde_json::to_value(tally)
+                .map_err(|e| RpcError(format!("Serialization error: {}", e)))?
+        }
+
         _ => {
             return Err(RpcError(format!("Method not found: {}", request.method)));
         }
@@ -599,6 +812,15 @@ pub async fn start_rpc_server(state: RpcState, port: u16) -> Result<()> {
     println!("   - stake_getDelegations");
     println!("   - stake_getUnstakeRequests");
     println!("   - stake_getRewards");
+    println!();
+    println!("   Governance:");
+    println!("   - gov_propose");
+    println!("   - gov_vote");
+    println!("   - gov_getProposal");
+    println!("   - gov_listProposals");
+    println!("   - gov_getVote");
+    println!("   - gov_getVotingPower");
+    println!("   - gov_getTallyResult");
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
