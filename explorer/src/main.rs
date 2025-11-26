@@ -168,6 +168,7 @@ async fn get_transaction(
                 types::TransactionType::Transfer { .. } => "Transfer",
                 types::TransactionType::ContractDeploy { .. } => "ContractDeploy",
                 types::TransactionType::ContractCall { .. } => "ContractCall",
+                types::TransactionType::EthereumLegacy { .. } => "EthereumLegacy",
             };
             
             Ok(Json(TransactionInfo {
@@ -248,6 +249,7 @@ async fn search(
                     types::TransactionType::Transfer { .. } => "Transfer",
                     types::TransactionType::ContractDeploy { .. } => "ContractDeploy",
                     types::TransactionType::ContractCall { .. } => "ContractCall",
+                    types::TransactionType::EthereumLegacy { .. } => "EthereumLegacy",
                 };
                 
                 Ok(Json(SearchResult::Transaction(TransactionInfo {
