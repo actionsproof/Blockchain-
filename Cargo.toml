@@ -15,7 +15,12 @@ members = [
     "staking",
     "governance",
     "act20-token",
-    "contracts/dex"
+    "contracts/dex",
+    "bridge",
+    "act721-nft",
+    "defi-lending",
+    "layer2-rollup",
+    "oracle-network"
 ]
 resolver = "2"
 
