@@ -844,6 +844,141 @@ actionsproof-g/
 
 ---
 
-**Last Updated**: November 26, 2025
-**Current Phase**: Phase 10 Complete - Advanced DeFi & Layer 2
-**Next Phase**: Phase 11 - Production Deployment & Ecosystem Growth
+## 🎨 Phase 12: Modern Frontend (Turborepo Monorepo) - IN PROGRESS
+
+### Overview
+Modern Next.js 15 Turborepo monorepo with Solana-inspired design language for ACTChain's web presence.
+
+### Architecture
+```
+actchain-monorepo/
+├── apps/
+│   ├── actscan/     # Block explorer (port 3001)
+│   └── actsite/     # Official website (port 3000)
+├── packages/
+│   ├── ui/          # Shared Solana-style components
+│   └── sdk/         # RPC client + WebSocket
+└── turbo.json       # Turborepo pipeline config
+```
+
+### Key Features
+- **Turborepo**: Monorepo build system for parallel dev/build
+- **Next.js 15**: App Router, React 18, Server Components
+- **Solana Design**: Gradient backgrounds, neon effects, particle animations
+- **Shared UI Library**: NeonButton, NeonCard, ParticleBg components
+- **SDK Package**: Lightweight RPC client connecting to live nodes
+- **TypeScript**: Full type safety across workspace
+- **Tailwind CSS**: Utility-first styling with custom ACT theme
+
+### Components Planned
+
+#### apps/actscan (Block Explorer)
+- Real-time block/tx feed with SWR polling
+- Block detail pages with validator info
+- Transaction history with event logs
+- Account explorer with balance/nonce
+- Network stats dashboard (TPS, validators, height)
+- Universal search (blocks/txs/accounts)
+
+#### apps/actsite (Official Site)
+- Landing page with hero section
+- Developer documentation portal
+- Ecosystem page (projects, tools, integrations)
+- Network statistics and metrics
+- Validator information
+- Governance dashboard
+
+#### packages/ui
+- `NeonButton` - Gradient buttons with variants
+- `NeonCard` - Glowing cards for data display
+- `ParticleBg` - Animated particle background
+- `StatCounter` - Animated number counters
+- `NetworkStatus` - Live network indicator
+- `GradientText` - Solana-style text gradients
+
+#### packages/sdk
+- `RpcClient` - JSON-RPC 2.0 client
+- `WebSocketClient` - Real-time block/tx subscriptions
+- Type definitions for all RPC methods
+- Multi-node failover support
+
+### Design System
+```css
+Colors:
+- Primary Purple: #9945FF (Solana-inspired)
+- Accent Green: #14F195
+- Turquoise: #00D18C
+- Background: #000000 → #0b0c11
+- Cards: rgba(8,16,24,0.6) with border
+
+Gradients:
+- Hero: linear-gradient(135deg, #9945FF 0%, #14F195 100%)
+- Cards: from-[#0b0c11]/50 to-[#111214]/40
+
+Typography:
+- Font: System UI stack (Inter fallback)
+- Headers: 600-800 weight
+- Body: 400-500 weight
+```
+
+### Technology Stack
+- **Framework**: Next.js 15 (App Router)
+- **Monorepo**: Turborepo 1.10+
+- **Package Manager**: pnpm (workspace protocol)
+- **Styling**: Tailwind CSS 3.x
+- **Data Fetching**: SWR (stale-while-revalidate)
+- **Type Safety**: TypeScript 5.x
+- **Animation**: Framer Motion (optional)
+- **Charts**: Recharts (for metrics)
+
+### RPC Integration
+Both apps connect to live ACT nodes:
+- Production: `http://107.178.223.1:8545`
+- Explorer API: `http://107.178.223.1:3001`
+- Fallback nodes: 34.70.254.28, 34.118.200.106
+
+### Development Workflow
+```bash
+# Install dependencies
+pnpm install
+
+# Run all apps in dev mode (parallel)
+pnpm dev
+
+# Build all packages
+pnpm build
+
+# Run production build
+pnpm start
+```
+
+### Deployment Plan
+- [ ] Set up Vercel project for monorepo
+- [ ] Configure environment variables for RPC endpoints
+- [ ] Deploy actscan.actchain.io (explorer)
+- [ ] Deploy actchain.io (main site)
+- [ ] Set up CDN for static assets
+- [ ] Configure custom domains
+- [ ] Add analytics (Plausible/PostHog)
+
+### Next Steps
+1. Generate monorepo scaffold with CLI tool
+2. Implement shared UI components
+3. Build ACTSCAN explorer pages
+4. Create ACTSITE landing page
+5. Connect SDK to live RPC nodes
+6. Add comprehensive documentation
+7. Deploy to production
+
+### Status
+- 📋 **PLANNED** - Architecture defined
+- ⏳ Scaffold generation pending
+- ⏳ Component development pending
+- ⏳ RPC integration pending
+- ⏳ Production deployment pending
+
+---
+
+**Last Updated**: November 27, 2025
+**Current Phase**: Phase 11 Complete - Backend Deployed | Phase 12 Planning
+**Next Phase**: Phase 12 - Modern Frontend Development
