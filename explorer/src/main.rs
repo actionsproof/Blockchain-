@@ -6,7 +6,7 @@ use axum::{
     routing::get,
     Router,
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
@@ -118,20 +118,32 @@ async fn index() -> Html<&'static str> {
 async fn get_latest_blocks(
     AxumState(state): AxumState<ExplorerState>,
 ) -> Result<Json<Vec<BlockInfo>>, AppError> {
-    // For now, return mock data
-    // TODO: Integrate with actual blockchain storage
-    let blocks = vec![
-        BlockInfo {
-            height: 100,
-            hash: "0x1234...".to_string(),
-            parent_hash: "0xabcd...".to_string(),
-            timestamp: 1700000000,
-            validator: "ACT-validator1...".to_string(),
-            transaction_count: 5,
-            state_root: "0xstate...".to_string(),
-            reward: 1000000000000000000, // 1 ACT
-        },
-    ];
+    // Get latest block height from RPC
+    let latest_height = state.rpc_client.get_block_number().await
+        .map_err(|e| AppError::Internal(format!("Failed to get block height: {}", e)))?;
+    
+    let mut blocks = Vec::new();
+    
+    // Get last 10 blocks
+    let start = latest_height.saturating_sub(9);
+    for height in (start..=latest_height).rev() {
+        match state.rpc_client.get_block_by_number(height).await {
+            Ok(Some(block)) => {
+                blocks.push(BlockInfo {
+                    height: block.height,
+                    hash: block.state_root.clone(), // Using state_root as block identifier
+                    parent_hash: block.parent_hash,
+                    timestamp: block.timestamp,
+                    validator: block.actor_pubkey,
+                    transaction_count: 0, // Would need full block with txs
+                    state_root: block.state_root,
+                    reward: block.reward,
+                });
+            }
+            Ok(None) => break,
+            Err(_) => break,
+        }
+    }
     
     Ok(Json(blocks))
 }
@@ -141,19 +153,23 @@ async fn get_block(
     AxumState(state): AxumState<ExplorerState>,
     Path(height): Path<u64>,
 ) -> Result<Json<BlockInfo>, AppError> {
-    // TODO: Query actual block from storage
-    let block = BlockInfo {
-        height,
-        hash: format!("0xblock{}", height),
-        parent_hash: format!("0xblock{}", height - 1),
-        timestamp: 1700000000 + (height * 30),
-        validator: "ACT-validator1...".to_string(),
-        transaction_count: 3,
-        state_root: "0xstate...".to_string(),
-        reward: 1000000000000000000,
-    };
-    
-    Ok(Json(block))
+    // Query actual block from RPC
+    match state.rpc_client.get_block_by_number(height).await {
+        Ok(Some(block)) => {
+            Ok(Json(BlockInfo {
+                height: block.height,
+                hash: block.state_root.clone(),
+                parent_hash: block.parent_hash,
+                timestamp: block.timestamp,
+                validator: block.actor_pubkey,
+                transaction_count: 0, // Would need full block with txs
+                state_root: block.state_root,
+                reward: block.reward,
+            }))
+        }
+        Ok(None) => Err(AppError::NotFound(format!("Block {} not found", height))),
+        Err(e) => Err(AppError::Internal(format!("RPC error: {}", e))),
+    }
 }
 
 /// Get transaction by hash
@@ -171,6 +187,12 @@ async fn get_transaction(
                 types::TransactionType::EthereumLegacy { .. } => "EthereumLegacy",
             };
             
+            // Try to get receipt for block height
+            let (block_height, status) = match state.rpc_client.get_transaction_receipt(&hash).await {
+                Ok(Some(receipt)) => (Some(receipt.block_height), if receipt.status { "Success" } else { "Failed" }),
+                _ => (None, "Pending"),
+            };
+            
             Ok(Json(TransactionInfo {
                 hash: hash.clone(),
                 from: tx.from.to_string(),
@@ -178,8 +200,8 @@ async fn get_transaction(
                 gas_limit: tx.gas_limit,
                 gas_price: tx.gas_price,
                 nonce: tx.nonce,
-                block_height: None, // TODO: Track block height
-                status: "Pending".to_string(),
+                block_height,
+                status: status.to_string(),
             }))
         }
         Ok(None) => Err(AppError::NotFound("Transaction not found".to_string())),
@@ -209,17 +231,21 @@ async fn get_account(
 async fn get_stats(
     AxumState(state): AxumState<ExplorerState>,
 ) -> Result<Json<NetworkStats>, AppError> {
+    // Get latest block height
+    let latest_block = state.rpc_client.get_block_number().await
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+    
     // Get mempool status
     let mempool = state.rpc_client.get_mempool_status().await
         .map_err(|e| AppError::Internal(e.to_string()))?;
     
     Ok(Json(NetworkStats {
-        latest_block: 100, // TODO: Get from node
-        total_transactions: 1500,
-        total_accounts: 50,
+        latest_block,
+        total_transactions: (latest_block * 10) as usize, // Estimate
+        total_accounts: 50, // Would need to track in state
         pending_transactions: mempool.total_transactions,
         avg_block_time: 30.0,
-        total_supply: 13000000000000000000000000, // 13M ACT
+        total_supply: 13_000_000_000_000_000_000_000_000, // 13M ACT
     }))
 }
 

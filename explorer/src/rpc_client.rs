@@ -130,4 +130,32 @@ impl NodeRpcClient {
         let status: MempoolStatus = serde_json::from_value(result)?;
         Ok(status)
     }
+    
+    pub async fn get_block_number(&self) -> Result<u64> {
+        let result = self.call("act_blockNumber", json!([])).await?;
+        let block_num: u64 = serde_json::from_value(result)?;
+        Ok(block_num)
+    }
+    
+    pub async fn get_block_by_number(&self, height: u64) -> Result<Option<types::BlockHeader>> {
+        let result = self.call("act_getBlock", json!([height])).await?;
+        
+        if result.is_null() {
+            return Ok(None);
+        }
+        
+        let block: types::BlockHeader = serde_json::from_value(result)?;
+        Ok(Some(block))
+    }
+    
+    pub async fn get_transaction_receipt(&self, hash: &str) -> Result<Option<types::TransactionReceipt>> {
+        let result = self.call("act_getTransactionReceipt", json!([hash])).await?;
+        
+        if result.is_null() {
+            return Ok(None);
+        }
+        
+        let receipt: types::TransactionReceipt = serde_json::from_value(result)?;
+        Ok(Some(receipt))
+    }
 }

@@ -86,8 +86,8 @@ impl HealthMonitor {
             ));
         }
 
-        // Get peer count
-        let peer_count = 0; // TODO: Get from P2P layer when available
+        // Get peer count from shared state
+        let peer_count = *state.peer_count.read().await;
 
         if peer_count == 0 {
             warnings.push("No peers connected".to_string());
@@ -103,11 +103,16 @@ impl HealthMonitor {
             ));
         }
 
-        // Check sync status
+        // Check sync status from shared state
+        let is_synced = *state.sync_status.read().await;
         let sync_status = SyncStatus {
-            is_synced: true, // TODO: Implement proper sync check
-            behind_blocks: 0,
+            is_synced,
+            behind_blocks: if is_synced { 0 } else { 100 }, // Estimate if not synced
         };
+        
+        if !is_synced {
+            warnings.push("Node is syncing".to_string());
+        }
 
         // Check validator status
         let validator_status = state.staking.get_validators()
